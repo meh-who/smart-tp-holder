@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assembly guide — rev 2.0 (NFC)</title>
+<style>
+  :root { --bg:#f6f2ea; --paper:#fffdf9; --ink:#1e1b17; --muted:#6c655a; --line:#e2dbcc; --accent:#c8522b; --code:#f1ece2; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#15130f; --paper:#1e1a15; --ink:#f0eadf; --muted:#a89e90; --line:#36302a; --code:#26211b; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Inter,system-ui,sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
+  header { margin-bottom: 36px; }
+  .kicker { color: var(--accent); font-weight: 600; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; }
+  h1 { font-size: 2rem; line-height: 1.15; margin: 6px 0 10px; letter-spacing: -.01em; }
+  .lede { color: var(--muted); font-size: 1.05rem; max-width: 60ch; }
+  h2 { font-size: 1.3rem; margin: 48px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+  h2 small { color: var(--muted); font-weight: 500; font-size: .85rem; margin-left: 8px; }
+  h3 { font-size: 1rem; margin: 22px 0 6px; }
+  p { max-width: 70ch; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 20px; font-size: .93rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .88em; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 5px; }
+  pre { background: var(--code); padding: 14px 16px; border-radius: 12px; overflow-x: auto; line-height: 1.45; }
+  pre code { background: none; padding: 0; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; margin: 18px 0; }
+  .card.warn { border-left: 4px solid var(--accent); }
+  .card h3 { margin-top: 0; }
+  ol.steps { padding-left: 0; list-style: none; counter-reset: s; }
+  ol.steps li { counter-increment: s; position: relative; padding: 10px 0 10px 44px; border-bottom: 1px dashed var(--line); }
+  ol.steps li::before { content: counter(s); position: absolute; left: 0; top: 10px; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--ink); color: var(--bg); font-weight: 600; font-size: .85rem; display: grid; place-items: center; }
+  ol.steps li b { display: block; }
+  .check li { margin: 4px 0; }
+  figure { margin: 18px 0; } figcaption { color: var(--muted); font-size: .85rem; margin-top: 6px; }
+  .diagram { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-family: ui-monospace, Menlo, monospace; font-size: .8rem; line-height: 1.35; white-space: pre; overflow-x: auto; }
+  .muted { color: var(--muted); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } @media (max-width: 640px) { .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="kicker">Assembly guide · revision 2.0</div>
+  <h1>The holder, with an NFC tag and a wall plug</h1>
+  <p class="lede">Everything that changed for the exhibition version: the holder runs from mains, stays online, and a visitor taps it with a phone to choose what it reads. The mechanical build (follower arm, declicked encoder, speaker box) is unchanged from the sensor-mounting document, which is included alongside.</p>
+</header>
+
+<section>
+  <h2>0 · What changed, and why</h2>
+  <table>
+    <tr><th>Before (rev C)</th><th>Now (rev 2.0)</th><th>Why</th></tr>
+    <tr><td>2000 mAh LiPo, light sleep, hourly sync</td><td>5 V USB wall adapter, always on, polls the server every 20 s</td><td>The gallery has an outlet; the visitor's source switch has to land within seconds, not an hour.</td></tr>
+    <tr><td>Source set by editing the server</td><td>Visitor taps an NFC tag → companion web page → picks News / X / TikTok / Reels</td><td>The visitor does the switching, so the news-versus-reels contrast is something they trigger.</td></tr>
+    <tr><td>No telemetry</td><td>Heartbeat every 20 s: online, last pull, items cached, sheets left</td><td>The page shows connection status, and you can see from your phone whether the piece is alive.</td></tr>
+  </table>
+  <div class="card warn">
+    <h3>You need an NFC <em>tag</em>, not an NFC <em>reader</em></h3>
+    <p>The phone is the reader. A passive sticker holding a URL is all the holder needs; iPhone and Android both pop up the link when tapped, with no app. A PN532 reader module would be for the holder reading the phone, which iPhones won't do for arbitrary apps. Nothing in the firmware knows the tag exists.</p>
+  </div>
+</section>
+
+<section>
+  <h2>1 · Parts <small>delta against the parts list</small></h2>
+  <table>
+    <tr><th>Add</th><th>Spec</th><th>≈USD</th></tr>
+    <tr><td>NFC tag sticker ×3</td><td>NTAG215 or NTAG216, 25–30 mm round, <b>on-metal</b> type if the cover is metal or you mount near the encoder can. NTAG213 (144 B) also fits the URL but leaves no headroom.</td><td>3</td></tr>
+    <tr><td>5 V 2 A USB wall adapter + 2 m USB-C cable</td><td>Any phone charger that is really 2 A. Pick a white cable; it runs down the wall in view.</td><td>10</td></tr>
+    <tr><td>470 µF electrolytic (if not already fitted)</td><td>Across amp VIN/GND. On USB power the amp runs from the board's 5 V pin, not the cell.</td><td>1</td></tr>
+    <tr><th>Drop</th><th></th><th></th></tr>
+    <tr><td>LiPo 2000 mAh, 2× 100 kΩ divider</td><td>Not needed on mains. Keep the battery connector free; a cell can go back in later with <code>MAINS_POWERED 0</code>.</td><td>−10</td></tr>
+  </table>
+  <p class="muted">Everything else — ESP32-S3 board, MAX98357A, 40 mm speaker, uxcell encoder (13 mm), MR63ZZ bearings, torsion spring, O-ring tyre, 10 kΩ/10 nF debounce, button — is as listed.</p>
+</section>
+
+<section>
+  <h2>2 · Wiring</h2>
+  <table>
+    <tr><th>Signal</th><th>ESP32-S3 GPIO</th><th>Goes to</th><th>Note</th></tr>
+    <tr><td>Encoder A</td><td>4</td><td>wheel encoder outer pin</td><td>10 kΩ pull-up to 3V3, 10 nF to GND at the board end</td></tr>
+    <tr><td>Encoder B</td><td>5</td><td>wheel encoder other outer pin</td><td>same RC. Middle pin of the encoder → GND</td></tr>
+    <tr><td>Button</td><td>6</td><td>momentary → GND</td><td>internal pull-up; short press repeats, hold 2 s = new roll</td></tr>
+    <tr><td>I2S BCLK</td><td>15</td><td>MAX98357A BCLK</td><td></td></tr>
+    <tr><td>I2S LRC</td><td>16</td><td>MAX98357A LRC</td><td></td></tr>
+    <tr><td>I2S DIN</td><td>17</td><td>MAX98357A DIN</td><td></td></tr>
+    <tr><td>Amp enable</td><td>18</td><td>MAX98357A SD_MODE</td><td>high = on; the firmware drops it between clips</td></tr>
+    <tr><td>Amp power</td><td>—</td><td>MAX98357A VIN ← board <b>5V / VBUS</b> pin, GND ← GND</td><td>470 µF + 100 nF across VIN–GND at the amp</td></tr>
+    <tr><td>Gain</td><td>—</td><td>MAX98357A GAIN → VIN</td><td>+12 dB (we are on 8 Ω if you used the DWEII speaker; 4 Ω also fine)</td></tr>
+    <tr><td>Speaker</td><td>—</td><td>amp + / − to speaker</td><td><b>never</b> ground a speaker terminal — the output is bridge-tied</td></tr>
+    <tr><td>USB-C</td><td>—</td><td>wall adapter</td><td>also your serial console for calibration</td></tr>
+  </table>
+  <div class="diagram">                     ESP32-S3
+   wall 5V 2A ──USB-C──┤ VBUS ───────────────┬─── VIN  MAX98357A ──┬── + ))) 40 mm
+                       │ GND  ───────────────┴─── GND              └── −      speaker
+                       │ 3V3 ──┬── 10k ──┐  ┌── GAIN→VIN (+12 dB)
+                       │       └── 10k ─┐│  │
+  encoder A ◄──────────┤ GPIO4 ◄────────┼┘──┼── 10nF → GND
+  encoder B ◄──────────┤ GPIO5 ◄────────┘───┼── 10nF → GND
+  encoder common ──────┤ GND                │
+  button ──────────────┤ GPIO6 (pull-up)    │
+                       │ GPIO15 ────────────┼── BCLK
+                       │ GPIO16 ────────────┼── LRC
+                       │ GPIO17 ────────────┼── DIN
+                       │ GPIO18 ────────────┴── SD_MODE
+
+  NFC tag: stuck to the inside of the cover, no wires. </div>
+  <p>Run encoder A/B as a twisted pair away from the speaker leads, with the JST-PH at the board end so the arm can be unplugged. Solder the encoder to a scrap of perfboard first; the pins are too fragile to crimp directly.</p>
+</section>
+
+<section>
+  <h2>3 · Mechanical <small>unchanged — summary</small></h2>
+  <ol class="steps">
+    <li><b>Declick the encoder.</b> Open the can's tabs, lift the detent spring out, close. Flick test: the hex rotor must coast, not stop at the next click. Do several; keep the smoothest.</li>
+    <li><b>Make the wheel.</b> Printed hub ~17 mm on the hex, O-ring tyre, ≈21 mm overall. Measure the hex across flats first; it varies between heights.</li>
+    <li><b>Build the follower arm.</b> 80 mm arm on MR63ZZ bearings, pivot 75 mm behind and 60 mm above the spindle axis, so the wheel rides the top of the roll within 5° of top-dead-centre for the whole life of the roll. Torsion spring preloaded >90° for 5–15 gf at the contact patch. All in the sensor-mounting document, to scale.</li>
+    <li><b>Box the speaker.</b> Sealed back volume, the 470 µF right at the amp.</li>
+    <li><b>Dry-fit on a full roll and an empty core.</b> The arm should sweep about 24° between the two with the tyre never leaving the paper.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>4 · The NFC tag</h2>
+  <div class="two">
+    <div class="card">
+      <h3>Where</h3>
+      <p>On the <b>front face of the holder's cover</b>, centred, where a thumb naturally rests when reaching for the roll. Phones read through 3–4 mm of plastic or wood; not through metal. If the cover is metal, use an on-metal (ferrite-backed) tag on the <em>outside</em> and let it show — it reads as an invitation.</p>
+      <p>Keep it ≥ 30 mm from the encoder can and the speaker magnet. Put a second tag on the wall label as a backup.</p>
+    </div>
+    <div class="card">
+      <h3>What to write</h3>
+      <p>One NDEF <b>URL record</b>: <code>https://&lt;your server&gt;/r/&lt;HOLDER_ID&gt;</code> — the same id as <code>HOLDER_ID</code> in <code>config.h</code>. Nothing else on the tag.</p>
+      <p>Write it with the free <b>NFC Tools</b> app (iOS/Android): Write → Add a record → URL → Write. Then <em>lock</em> the tag (Other → Lock tag) so a visitor cannot overwrite it. Locking is permanent, so test first.</p>
+    </div>
+  </div>
+  <p>iPhones read tags with the screen on, from the top edge; Androids from the middle of the back. Mention both on the wall label: <em>“Hold your phone to the cover.”</em></p>
+</section>
+
+<section>
+  <h2>5 · Flash the firmware</h2>
+  <ol class="steps">
+    <li><b>Arduino IDE 2.x</b>, Boards Manager → <code>esp32</code> by Espressif (3.x).</li>
+    <li><b>Libraries</b> (Library Manager): <code>ESP32Encoder</code>, <code>ESP8266Audio</code>, <code>ArduinoJson</code> (7.x).</li>
+    <li><b>Board settings:</b> your board (e.g. “Adafruit Feather ESP32-S3” or “ESP32S3 Dev Module”) · USB CDC On Boot: <b>Enabled</b> · Flash size as fitted · Partition scheme with ≥ 4 MB for the filesystem (“16M Flash (3MB APP/9.9MB FATFS)” is fine; the sketch formats it as LittleFS on first boot) · PSRAM as fitted.</li>
+    <li><b>Edit <code>config.h</code>:</b> <code>HOLDER_ID</code>, <code>HOLDER_KEY</code> (from <code>python manage.py key</code>), <code>WIFI_SSID/PASS</code>, <code>SERVER_URL</code>. Leave <code>MAINS_POWERED 1</code>.</li>
+    <li><b>Upload</b>, open Serial Monitor at 115200. You should see the IP, then <code>[sync] bulletin …: N items from news</code> within half a minute.</li>
+    <li><b>Pull a sheet.</b> It speaks. If the count runs backwards (<code>status</code> shows travel not increasing), set <code>ENCODER_INVERT 1</code> or swap A and B.</li>
+  </ol>
+  <div class="card">
+    <h3>Calibrate once</h3>
+    <p>Type <code>cal</code> in the serial console to mark the start, pull <b>exactly five sheets</b> (570 mm on standard perforation), tear, then type <code>cal 570</code>. It stores mm-per-count in flash. Check with <code>status</code>; a three-sheet pull should log three items.</p>
+  </div>
+</section>
+
+<section>
+  <h2>6 · Deploy the server</h2>
+  <p>Anything that runs Docker and has a public HTTPS hostname: a €5 VPS, Fly.io, Railway, a Pi at home behind a tunnel. HTTPS is required — the OAuth providers refuse plain-HTTP callbacks, and iOS only opens <code>https</code> links from tags without a warning.</p>
+<pre><code># on the server
+git clone … holder && cd holder/server
+cp .env.example .env            # set PUBLIC_URL, SECRET_KEY, TTS_PROVIDER, feeds, OAuth keys
+docker build -t holder .
+docker run -d --name holder --env-file .env -p 8000:8000 -v holder-data:/data --restart unless-stopped holder
+# put Caddy/nginx/Cloudflare in front for TLS on PUBLIC_URL
+
+# register the holder (same id and key as config.h) and warm the cache
+docker exec holder python manage.py add-holder lisbon-01 &lt;key&gt; --name "TEI Lisbon"
+docker exec holder python manage.py build lisbon-01 news
+docker exec holder python manage.py tag-url lisbon-01     # → write this to the tag</code></pre>
+  <h3>Text to speech</h3>
+  <p><code>TTS_PROVIDER=edge</code> is free and sounds good (Microsoft neural voices through <code>edge-tts</code>). <code>openai</code> needs a key and sounds better. <code>silent</code> produces quiet tones of the right length so you can test the whole pipeline on a laptop with no network. Clips are cached by content hash in <code>/data/media</code>, so re-reads cost nothing.</p>
+  <h3>OAuth apps</h3>
+  <table>
+    <tr><th>Service</th><th>Where to register</th><th>Redirect URI to whitelist</th><th>What you actually get</th></tr>
+    <tr><td>X</td><td>developer.x.com → project → app, OAuth 2.0, type “Web App”</td><td><code>PUBLIC_URL/auth/x/callback</code></td><td>The visitor's home timeline. Only on paid API tiers — check current pricing before you depend on it.</td></tr>
+    <tr><td>TikTok</td><td>developers.tiktok.com → app with Login Kit + Display API (<code>video.list</code>)</td><td><code>PUBLIC_URL/auth/tiktok/callback</code></td><td>The visitor's <b>own</b> videos' captions. No For You feed exists in the API. App review takes days — start now.</td></tr>
+    <tr><td>Instagram Reels</td><td>developers.facebook.com → “Instagram API with Instagram Login”</td><td><code>PUBLIC_URL/auth/reels/callback</code></td><td>The visitor's <b>own</b> Reels' captions, professional accounts only. No Reels feed exists in the API.</td></tr>
+    <tr><td>News</td><td>—</td><td>—</td><td>RSS, no login. <code>NEWS_FEEDS</code> in <code>.env</code>.</td></tr>
+  </table>
+  <div class="card warn">
+    <h3>Plan B for the opening: curated sets</h3>
+    <p>If an app review has not come through, drop <code>/data/curated/tiktok.json</code> (or <code>reels.json</code>, <code>x.json</code>) on the server — <code>{"items":[{"id":"1","text":"…"}]}</code>. The page then shows that service as “Connected · curated set” and the switch works exactly the same. Say so on the wall text.</p>
+  </div>
+</section>
+
+<section>
+  <h2>7 · Commissioning on site <small>≈ 90 min, in this order</small></h2>
+  <ul class="check">
+    <li>☐ Wall bracket level at 700 mm; USB cable dressed; adapter plugged in; LED on.</li>
+    <li>☐ Serial console (or the page) shows <b>Online</b> within 60 s on the venue wi-fi. If the venue has a captive portal, use your own hotspot or a travel router — the ESP32 cannot click “Accept”.</li>
+    <li>☐ Tap tag with an iPhone and an Android. Page opens, shows <b>Online</b>, <b>Now reading: News</b>.</li>
+    <li>☐ Pull three sheets → three items, in order, ~13 s of speech. Backlog: pull a metre → stops after four items.</li>
+    <li>☐ Switch to a second source on the page → “Preparing…” → within 20 s the holder says <em>“Now reading TikTok.”</em> and the next sheet is from it.</li>
+    <li>☐ Hold the button 2 s → <em>“New roll.”</em> Page shows 200 sheets left.</li>
+    <li>☐ Unplug the router for a minute: holder keeps reading its cache; page shows Offline, then recovers.</li>
+    <li>☐ Volume check from the doorway and from the seat. The GAIN strap is the only hardware knob; <code>GAIN_DB</code> in <code>config.h</code> trims in software.</li>
+    <li>☐ Tray under the holder; first roll fitted; spare rolls and the second tag in the drawer.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>8 · If something is wrong</h2>
+  <table>
+    <tr><th>Symptom</th><th>Look at</th></tr>
+    <tr><td>Page says “Not heard from yet”</td><td>Wrong <code>SERVER_URL</code> or <code>HOLDER_KEY</code> (server log shows 401), or wi-fi. Serial console tells you which.</td></tr>
+    <tr><td>Speaks only on the first pull after boot, then silence</td><td>Amp enable wiring (GPIO18) or the 5 V rail sagging — check the 470 µF, use a real 2 A adapter.</td></tr>
+    <tr><td>Items fire on wobble or not at all</td><td>Calibration (<code>status</code> → mm/count), debounce caps, or the tyre skidding: more spring preload, cleaner O-ring.</td></tr>
+    <tr><td>Switching takes minutes</td><td>TTS is slow on first build (edge ≈ 1 s per item). Warm the cache with <code>manage.py build</code> for every source before opening.</td></tr>
+    <tr><td>Phone opens the page but buttons say “open the page from the holder's tag”</td><td>Cookies blocked (private browsing). Normal browsing mode, or re-tap.</td></tr>
+    <tr><td>Tag reads nothing</td><td>Metal behind it. Use an on-metal tag, or move it to the plastic part of the cover.</td></tr>
+    <tr><td>Crackle during download</td><td>Shouldn't happen (sync runs on the other core), but if the board has no PSRAM, lower <code>POLL_MAINS_S</code> traffic by setting it to 30.</td></tr>
+  </table>
+</section>
+
+<p class="muted" style="margin-top:48px">Files: <code>firmware/holder/</code> (Arduino sketch, 6 files), <code>firmware/test/</code> (gesture engine test, runs on a laptop), <code>server/</code> (FastAPI app, companion page, Dockerfile), <code>docs/sensor-mounting.html</code> (arm geometry, to scale).</p>
+</main>
+</body>
+</html>

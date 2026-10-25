@@ -1,84 +1,66 @@
 # smart-tp-holder
 
-Web control for *Untitled (toilet roll holder)*: a toilet roll holder that reads a feed aloud as paper is pulled.
-
-A visitor taps their phone on the NFC tag on the holder. That opens this page, which shows:
-
-- whether the holder is connected, and the line it's reading right now
-- which source the roll reads (News, X, TikTok, Reels), with a switch to change it
-- a way to connect their own account, and to forget it again
+*(S)wipable, Scrollable, Flushable: An Interaction Model for Toilet Paper* — a toilet-roll
+holder that reads a feed aloud, one item per sheet pulled. A visitor taps the NFC tag on the
+holder with a phone; a companion page opens showing whether the holder is online, what it is
+reading, and how much paper is left, and lets them choose the source: News, X, TikTok or Reels.
 
 ```
- phone ──NFC tap──▶ web control (this repo) ◀──WebSocket── holder (ESP32 + scroll-wheel encoder)
-                         │
-                         └── News RSS / X / TikTok / Instagram APIs
+ phone ──NFC tap──▶ companion page ──┐
+                                     ▼
+                      server (FastAPI) ── builds bulletin.json + MP3 clips (server-side TTS)
+                                     ▲
+ holder (ESP32-S3) ── heartbeat every 20 s, downloads new bulletin, plays MP3s per sheet
 ```
 
-The holder connects *out* to the server, so it works on any Wi-Fi without port forwarding. The server does the API work and sends the holder plain text to speak.
+The holder only ever connects *out* over HTTPS, so it works on any wi-fi without port
+forwarding. Speech is synthesised on the server and cached, so the device plays files and
+never needs a network round-trip on the pull path.
 
-## Run it
+    firmware/holder/     Arduino sketch for ESP32-S3 (open holder.ino in Arduino IDE 2.x)
+    firmware/test/       gesture engine test, runs on a laptop
+    server/              FastAPI server + companion page + Dockerfile (see server/.env.example)
+    docs/                assembly-guide.html (start here), sensor-mounting.html (arm geometry)
 
-Needs Node 20+.
+## Run the server locally, no hardware, no network
 
-```sh
-npm install
-DEMO=1 npm start            # http://localhost:8080
-npm run simulate            # in a second terminal: a fake holder; press Enter to pull a sheet
-```
+    cd server && pip install -r requirements.txt
+    export TTS_PROVIDER=silent SECRET_KEY=dev PUBLIC_URL=http://localhost:8000 CURATED_DIR=data/curated
+    python manage.py add-holder demo-01 demokey --name Demo
+    uvicorn app:app --reload &
+    python simulate_holder.py http://localhost:8000 demo-01 demokey   # pretends to be the ESP32
+    open http://localhost:8000/r/demo-01                              # what the phone sees
 
-`DEMO=1` lets every service "connect" without real credentials and read invented text, so you can rehearse the whole flow. News still reads real RSS headlines when the network allows.
-
-For real use, copy `.env.example` to `.env`, fill it in, and run `node --env-file=.env server/index.js`.
-
-## The NFC tag
-
-Write one URL record to the tag (NTAG213 or larger) with any NFC writer app:
-
-```
-https://<your-server>/?h=roll-1
-```
-
-`h` is the holder id from `HOLDER_IDS`. One server can run several holders, each with its own tag.
+`TTS_PROVIDER=silent` makes quiet tones of the right length so the whole flow can be
+rehearsed. Switch to `edge` (free neural voices) or `openai` for real speech.
 
 ## Hosting
 
-The page must be reachable from visitors' phones, and OAuth needs HTTPS. Options:
+The page must be reachable from visitors' phones and OAuth needs HTTPS. Railway, Fly.io or
+any VPS with Docker: deploy `server/`, mount a volume at `/data`, set the variables from
+`server/.env.example`, and put `PUBLIC_URL` on HTTPS. Then:
 
-- **A small host** (Render, Fly.io, Railway, a VPS): deploy this repo, set the env vars, point the holder at `wss://<host>/device`.
-- **A laptop or Raspberry Pi at the venue**, exposed with a tunnel (Cloudflare Tunnel, ngrok). Good for offline-ish shows; run with `DEMO=1` if the venue network blocks the APIs.
+    python manage.py add-holder lisbon-01 <key> --name "TEI Lisbon"   # same id/key as firmware config.h
+    python manage.py build lisbon-01 news                              # warm the clip cache
+    python manage.py tag-url lisbon-01                                 # → write this URL to the NFC tag
 
-Set `PUBLIC_URL` to the HTTPS address, and register `<PUBLIC_URL>/auth/<service>/callback` with each service.
+Register `<PUBLIC_URL>/auth/<service>/callback` with each service you enable.
 
 ## Services
 
 | Source | Account needed | What it reads | Setup |
 |---|---|---|---|
-| News | No | Headlines and summaries from `NEWS_FEEDS` | Any RSS URLs |
-| X | Yes | The visitor's home timeline | X developer app, OAuth 2.0, `tweet.read users.read`. Timeline access depends on your API tier. |
-| TikTok | Yes | Captions of the visitor's own videos | TikTok Login Kit app with `user.info.basic`, `video.list`; needs TikTok app review for public use. |
-| Reels | Yes | Captions of the visitor's own Reels | Meta app using Instagram API with Instagram Login, `instagram_business_basic`. Works with professional (business/creator) accounts. |
+| News | No | Headlines from `NEWS_FEEDS` | Any RSS URLs |
+| X | Yes | The visitor's home timeline | X developer app, OAuth 2.0, `tweet.read users.read offline.access`. Timeline access depends on the (paid) API tier. |
+| TikTok | Yes | Captions of the visitor's **own** videos | TikTok Login Kit + Display API, `user.info.basic`, `video.list`; app review needed for public use. |
+| Reels | Yes | Captions of the visitor's **own** Reels | Meta app, Instagram API with Instagram Login, `instagram_business_basic`; professional accounts only. |
 
-None of these platforms expose their recommendation feeds (For You, Reels tab) through public APIs, so TikTok and Reels read the visitor's own posts. The provider code lives in `server/providers/`; endpoints should be checked against each platform's current docs when you register the apps.
+Neither TikTok nor Instagram exposes the feed a person scrolls, only their own posts. For a
+venue, `server/data/curated/<source>.json` serves a curated public set instead and the page
+shows that service as "Connected · curated set".
 
-## Privacy
+## The NFC tag
 
-The holder sits in a bathroom, so visitor accounts are treated as borrowed:
-
-- tokens are held in memory only, never written to disk
-- only one visitor account per holder at a time; connecting a new one replaces the old
-- an account is forgotten after `AUTH_TTL_MINUTES` without use (default 30), or straight away with **Forget my account**, and the roll falls back to News
-
-## Holder firmware
-
-See [docs/protocol.md](docs/protocol.md) for the WebSocket messages and an ESP32 sketch.
-
-## Layout
-
-```
-server/index.js        HTTP, live updates, OAuth, device WebSocket
-server/providers/      one file per source
-server/demo.js         invented lines for DEMO=1
-public/                the web control (no build step)
-tools/simulate-holder.js
-docs/protocol.md
-```
+One NDEF URL record, `https://<PUBLIC_URL>/r/<holder-id>`, on an NTAG215/216 sticker (on-metal
+type if the cover is metal). Write and lock it with the NFC Tools app. The firmware does not
+know the tag exists; the phone is the reader.

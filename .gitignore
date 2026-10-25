@@ -1,4 +1,7 @@
-node_modules/
-data/
-.env
+server/data/holder.sqlite
+server/data/media/
+server/.env
+__pycache__/
+*.pyc
+firmware/test/motion_test
 .DS_Store

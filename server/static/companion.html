@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4efe6">
+<title>The roll</title>
+<style>
+  :root {
+    --bg: #f4efe6; --paper: #fffdf8; --ink: #1d1a16; --muted: #6f675c; --line: #e3dccd;
+    --accent: #c8522b; --ok: #2f7d4f; --warn: #b7791f; --off: #9a9289;
+    --radius: 18px; --pad: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #15130f; --paper: #1f1b16; --ink: #f2ece1; --muted: #a79d8f; --line: #342e26; --off: #6d6559; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.45 ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  main { max-width: 520px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px 48px; }
+  h1 { font-size: 1.05rem; font-weight: 600; letter-spacing: .01em; margin: 6px 0 2px; }
+  .sub { color: var(--muted); font-size: .9rem; margin: 0 0 18px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: var(--pad); margin-bottom: 14px; }
+
+  /* status */
+  .status { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--off); box-shadow: 0 0 0 4px color-mix(in srgb, var(--off) 20%, transparent); }
+  .dot.on { background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 20%, transparent); animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--ok) 8%, transparent); } }
+  .status b { font-weight: 600; display: block; }
+  .status span { color: var(--muted); font-size: .9rem; }
+  .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+  .meta div { border-top: 1px solid var(--line); padding-top: 10px; }
+  .meta small { color: var(--muted); display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+  .meta strong { font-weight: 600; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+
+  /* roll gauge: a shrinking roll, seen end-on */
+  .roll { display: flex; align-items: center; gap: 14px; margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .roll svg { width: 64px; height: 64px; flex: none; }
+  .roll p { margin: 0; font-size: .92rem; }
+  .roll p span { color: var(--muted); display: block; font-size: .82rem; }
+
+  /* now reading */
+  .reading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .reading .label { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+  .reading .src { font-size: 1.35rem; font-weight: 600; }
+  .pending { color: var(--warn); font-size: .88rem; margin-top: 6px; }
+
+  /* services */
+  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 10px 4px; font-weight: 600; }
+  .svc { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
+  .svc:first-of-type { border-top: 0; padding-top: 2px; }
+  .svc:last-of-type { padding-bottom: 2px; }
+  .svc .name { font-weight: 600; }
+  .svc .acct { color: var(--muted); font-size: .85rem; }
+  .svc .note { grid-column: 1 / -1; color: var(--muted); font-size: .82rem; margin: -4px 0 0; }
+  .btn { appearance: none; border: 1px solid var(--line); background: var(--paper); color: var(--ink);
+    border-radius: 999px; padding: 9px 16px; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.link { border: 0; padding: 6px 0; color: var(--muted); font-weight: 500; }
+  .actions { display: flex; gap: 8px; align-items: center; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: .9rem; opacity: 0; transition: .25s; pointer-events: none; max-width: 90vw; }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+  footer { color: var(--muted); font-size: .78rem; text-align: center; margin-top: 26px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<main>
+  <h1>The roll</h1>
+  <p class="sub" id="holderName">Connecting…</p>
+
+  <section class="card">
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <div><b id="stateLine">Looking for the holder</b><span id="stateSub">This takes a moment.</span></div>
+    </div>
+    <div class="meta">
+      <div><small>Last pull</small><strong id="lastPull">—</strong></div>
+      <div><small>Cached</small><strong id="cached">—</strong></div>
+      <div><small>Queue</small><strong id="queue">—</strong></div>
+    </div>
+    <div class="roll">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="30" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <circle id="rollOuter" cx="32" cy="32" r="30" fill="var(--bg)" stroke="var(--ink)" stroke-width="1.5"/>
+        <circle cx="32" cy="32" r="11" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5"/>
+      </svg>
+      <p><b id="sheetsLeft">—</b> sheets left<span id="sheetsNote">on this roll</span></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="reading">
+      <div><div class="label">Now reading</div><div class="src" id="nowReading">—</div></div>
+      <div class="actions"><button class="btn link" id="refreshBtn" type="button">Refresh</button></div>
+    </div>
+    <div class="pending" id="pending" hidden></div>
+  </section>
+
+  <h2>Choose what the roll reads</h2>
+  <section class="card" id="services"></section>
+
+  <footer>
+    One item per sheet. Pulled paper is not taken away.<br>
+    Choosing a service connects it to this holder only, until the end of the day.
+  </footer>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const HOLDER = "__HOLDER_ID__";
+  const api = p => `/api/holder/${encodeURIComponent(HOLDER)}${p}`;
+  const $ = id => document.getElementById(id);
+  let state = null, timer = null, busy = false;
+
+  const fmtAgo = s => s == null ? "—" : s < 5 ? "just now" : s < 60 ? `${s} s ago` : s < 3600 ? `${Math.round(s/60)} min ago` : `${Math.round(s/3600)} h ago`;
+
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600);
+  }
+
+  function render(s) {
+    state = s;
+    $("holderName").textContent = s.holder.name ? `Holder “${s.holder.name}”` : `Holder ${s.holder.id}`;
+    const dot = $("dot");
+    dot.classList.toggle("on", s.online);
+    if (s.online) {
+      $("stateLine").textContent = s.playing ? "Online — speaking" : "Online";
+      $("stateSub").textContent = `Checked in ${fmtAgo(s.last_seen_s)} · wi-fi ${s.rssi ?? "?"} dBm · fw ${s.fw ?? "?"}`;
+    } else if (s.last_seen_s != null) {
+      $("stateLine").textContent = "Offline";
+      $("stateSub").textContent = `Last seen ${fmtAgo(s.last_seen_s)}. It keeps reading what it has cached.`;
+    } else {
+      $("stateLine").textContent = "Not heard from yet";
+      $("stateSub").textContent = "Power it on and give it a minute.";
+    }
+    $("lastPull").textContent = fmtAgo(s.last_pull_s);
+    $("cached").textContent = s.bulletin.items ? `${s.bulletin.items} items` : "—";
+    $("queue").textContent = s.queued ?? "—";
+
+    const used = s.sheets_this_roll ?? 0, total = s.roll_sheets || 200;
+    const left = Math.max(0, total - used);
+    $("sheetsLeft").textContent = s.sheets_this_roll == null ? "—" : left;
+    // Area of paper is proportional to sheets left: r² scales linearly between core (11) and full (30).
+    const frac = Math.max(0, Math.min(1, left / total));
+    const r = Math.sqrt(11*11 + frac * (30*30 - 11*11));
+    $("rollOuter").setAttribute("r", r.toFixed(1));
+    $("sheetsNote").textContent = left <= 12 ? "nearly out — ask for a new roll" : "on this roll";
+
+    const labels = Object.fromEntries(s.services.map(x => [x.id, x.label]));
+    const actual = s.holder_source || s.built_source;
+    $("nowReading").textContent = actual ? labels[actual] || actual : "—";
+
+    const p = $("pending");
+    if (s.desired_source !== actual || s.bulletin.status === "building") {
+      p.hidden = false;
+      if (s.bulletin.status === "building") p.textContent = `Preparing ${labels[s.desired_source]}… the holder switches within ${s.poll_s} s of it being ready.`;
+      else if (s.bulletin.status === "error") p.textContent = `Could not build ${labels[s.desired_source]}: ${s.bulletin.error || "unknown error"}. Still reading ${labels[actual] || "the previous source"}.`;
+      else if (!s.online) p.textContent = `Switched to ${labels[s.desired_source]}. The holder will pick it up when it is back online.`;
+      else p.textContent = `Switching to ${labels[s.desired_source]}…`;
+    } else p.hidden = true;
+
+    const box = $("services"); box.innerHTML = "";
+    for (const svc of s.services) {
+      const row = document.createElement("div"); row.className = "svc";
+      const isDesired = s.desired_source === svc.id;
+      const left = document.createElement("div");
+      left.innerHTML = `<div class="name">${svc.label}</div><div class="acct">${
+        !svc.configured && svc.id !== "news" ? "Not set up on this server" :
+        svc.id === "news" ? "Always available" :
+        svc.connected ? (svc.account ? `Connected as ${svc.account}` : "Connected") : "Not connected"}</div>`;
+      const right = document.createElement("div"); right.className = "actions";
+      if (svc.connected) {
+        const use = document.createElement("button"); use.type = "button";
+        use.className = "btn" + (isDesired ? " active" : " primary");
+        use.textContent = isDesired ? "Reading" : "Read this";
+        use.disabled = isDesired || busy;
+        use.onclick = () => setSource(svc.id);
+        right.appendChild(use);
+        if (svc.id !== "news") {
+          const dis = document.createElement("button"); dis.type = "button"; dis.className = "btn link"; dis.textContent = "Disconnect";
+          dis.onclick = () => disconnect(svc.id);
+          right.appendChild(dis);
+        }
+      } else {
+        const con = document.createElement("button"); con.type = "button"; con.className = "btn";
+        con.textContent = "Connect"; con.disabled = !svc.configured;
+        con.onclick = () => { location.href = `/auth/${svc.id}/start?holder=${encodeURIComponent(HOLDER)}`; };
+        right.appendChild(con);
+      }
+      row.appendChild(left); row.appendChild(right);
+      const note = document.createElement("p"); note.className = "note"; note.textContent = svc.note; row.appendChild(note);
+      box.appendChild(row);
+    }
+  }
+
+  async function refresh() {
+    try {
+      const r = await fetch(api("/status"), {cache: "no-store"});
+      if (!r.ok) throw new Error(r.status === 403 ? "Open this page by tapping the holder." : `HTTP ${r.status}`);
+      render(await r.json());
+    } catch (e) {
+      $("stateLine").textContent = "Can't reach the server"; $("stateSub").textContent = e.message;
+    }
+  }
+
+  async function setSource(id) {
+    busy = true;
+    try {
+      const r = await fetch(api("/source"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({source: id})});
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.detail || `HTTP ${r.status}`);
+      toast(`Preparing ${id === "news" ? "the news" : id}…`);
+    } catch (e) { toast(e.message); }
+    busy = false; refresh();
+  }
+
+  async function disconnect(id) {
+    if (!confirm(`Disconnect ${id} from this holder?`)) return;
+    await fetch(api("/disconnect"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({provider: id})});
+    refresh();
+  }
+
+  $("refreshBtn").onclick = refresh;
+  const q = new URLSearchParams(location.search);
+  if (q.get("connected")) { toast(`${q.get("connected")} connected`); history.replaceState(null, "", location.pathname); }
+  refresh();
+  timer = setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 5000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
+})();
+</script>
+</body>
+</html>
