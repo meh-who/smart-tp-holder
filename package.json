@@ -1,0 +1,21 @@
+{
+  "name": "smart-tp-holder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web control for the smart toilet paper holder: NFC landing page, source switching, account authorisation, and the holder's device link.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "simulate": "node tools/simulate-holder.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}

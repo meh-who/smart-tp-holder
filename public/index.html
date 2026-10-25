@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#D5DEE2">
+  <title>The roll</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="roll" aria-busy="true">
+    <section class="sheet now" aria-labelledby="status-text">
+      <p class="status" id="status">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="status-text">Looking for the holder</span>
+      </p>
+      <blockquote class="line" id="line" aria-live="polite">
+        <p>…</p>
+      </blockquote>
+      <p class="meta" id="meta"></p>
+    </section>
+
+    <section class="sheet" aria-labelledby="sources-title">
+      <h2 id="sources-title">What the roll reads</h2>
+      <p class="hint">Pick one. The next sheet you pull reads it aloud.</p>
+      <form id="sources" class="sources"></form>
+    </section>
+
+    <section class="sheet account" id="account" hidden aria-labelledby="account-title">
+      <h2 id="account-title">Your account</h2>
+      <p id="account-text"></p>
+      <button type="button" class="quiet" id="forget">Forget my account</button>
+    </section>
+
+    <div class="tear" aria-hidden="true"></div>
+  </main>
+
+  <p class="toast" id="toast" role="status" aria-live="polite"></p>
+
+  <template id="source-row">
+    <label class="source">
+      <input type="radio" name="source">
+      <span class="body">
+        <span class="name"></span>
+        <span class="blurb"></span>
+      </span>
+      <span class="side"></span>
+    </label>
+  </template>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
