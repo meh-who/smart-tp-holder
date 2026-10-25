@@ -1,0 +1,41 @@
+# fly.toml — Fly.io config for the holder server.
+#   fly launch --copy-config --no-deploy   (first time, from this folder; pick a region near the venue)
+#   fly volumes create holder_data --size 1 --region <same region>
+#   fly secrets set SECRET_KEY=<long random> PUBLIC_URL=https://<app-name>.fly.dev
+#   fly deploy
+app = "smart-tp-holder"          # change if the name is taken; PUBLIC_URL must match
+primary_region = "mad"           # Madrid — nearest Fly region to Lisbon
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  TTS_PROVIDER = "edge"
+  EDGE_VOICE = "en-GB-SoniaNeural"
+  HOLDER_POLL_S = "20"
+  HOLDER_DB = "/data/holder.sqlite"
+  MEDIA_DIR = "/data/media"
+  CURATED_DIR = "/data/curated"
+  NEWS_FEEDS = "https://feeds.bbci.co.uk/news/world/rss.xml,https://www.theguardian.com/world/rss"
+
+[[mounts]]
+  source = "holder_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "off"     # the holder polls every 20 s; never let the machine sleep
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"               # edge-tts + ffmpeg are happier with 512 than 256

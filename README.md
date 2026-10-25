@@ -36,8 +36,20 @@ rehearsed. Switch to `edge` (free neural voices) or `openai` for real speech.
 
 ## Hosting
 
-The page must be reachable from visitors' phones and OAuth needs HTTPS. Railway, Fly.io or
-any VPS with Docker: deploy `server/`, mount a volume at `/data`, set the variables from
+The page must be reachable from visitors' phones and OAuth needs HTTPS. Any host that runs
+a Docker container continuously with a small persistent disk will do; `server/fly.toml` is
+ready for Fly.io:
+
+    brew install flyctl && fly auth login          # once, on your laptop
+    cd server
+    fly launch --copy-config --no-deploy           # accept the name (or change it in fly.toml)
+    fly volumes create holder_data --size 1 --region mad
+    fly secrets set SECRET_KEY="$(openssl rand -hex 32)" PUBLIC_URL=https://smart-tp-holder.fly.dev
+    fly deploy
+    fly ssh console -C "python manage.py add-holder lisbon-01 <key> --name 'TEI Lisbon'"
+    fly ssh console -C "python manage.py build lisbon-01 news"
+
+For another host: deploy `server/`, mount a volume at `/data`, set the variables from
 `server/.env.example`, and put `PUBLIC_URL` on HTTPS. Then:
 
     python manage.py add-holder lisbon-01 <key> --name "TEI Lisbon"   # same id/key as firmware config.h
