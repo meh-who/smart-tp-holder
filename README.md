@@ -20,7 +20,8 @@ never needs a network round-trip on the pull path.
     firmware/holder/     Arduino sketch for ESP32-S3 (open holder.ino in Arduino IDE 2.x)
     firmware/test/       gesture engine test, runs on a laptop
     server/              FastAPI server + companion page + Dockerfile (see server/.env.example)
-    docs/                assembly-guide.html (start here), sensor-mounting.html (arm geometry)
+    docs/                assembly guide (start here), sensor mounting, parts list, technical rider,
+                         earlier revisions — see docs/README.md
 
 ## Run the server locally, no hardware, no network
 

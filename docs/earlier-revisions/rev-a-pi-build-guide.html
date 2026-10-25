@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html{color-scheme:light dark}
+  body{margin:0}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<title>Broadsheet Build Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+
+<style>
+:root{
+  --paper:#FAFAF7; --surface:#FFFFFF; --surface-2:#F1F3F2;
+  --ink:#131A1B; --ink-2:#53656A; --ink-3:#7E8E91;
+  --rule:#DCE3E2; --rule-2:#C3CECC;
+  --accent:#0D7268; --accent-soft:#E2F0ED; --accent-line:#0D7268;
+  --warn:#B8471E; --warn-soft:#FAEBE4;
+  --shadow:0 1px 2px rgba(19,26,27,.05), 0 8px 24px -12px rgba(19,26,27,.14);
+
+  --f-display:"Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --f-body:"Newsreader", Georgia, "Times New Roman", serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --col:69ch; --gutter:24px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1213; --surface:#151C1D; --surface-2:#1B2425;
+    --ink:#E4EAE8; --ink-2:#9BADAE; --ink-3:#74878A;
+    --rule:#263132; --rule-2:#33403F;
+    --accent:#4ECDBF; --accent-soft:#13312F; --accent-line:#4ECDBF;
+    --warn:#E98A5C; --warn-soft:#331C12;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1213; --surface:#151C1D; --surface-2:#1B2425;
+  --ink:#E4EAE8; --ink-2:#9BADAE; --ink-3:#74878A;
+  --rule:#263132; --rule-2:#33403F;
+  --accent:#4ECDBF; --accent-soft:#13312F; --accent-line:#4ECDBF;
+  --warn:#E98A5C; --warn-soft:#331C12;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  margin:0; padding-block:0; padding-inline:var(--gutter);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--col); margin:0 auto}
+.wide{max-width:940px; margin:0 auto}
+
+/* ---------- perforation: the one motif ---------- */
+.perf{
+  --dot:var(--rule-2);
+  display:flex; align-items:center; gap:10px;
+  margin-block:56px 44px; color:var(--ink-3);
+}
+.perf::before,.perf::after{
+  content:""; flex:1; height:1px;
+  background-image:radial-gradient(circle, var(--dot) 1.1px, transparent 1.2px);
+  background-size:7px 7px; background-repeat:repeat-x; background-position:center;
+}
+.perf span{
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; white-space:nowrap;
+}
+
+/* ---------- type ---------- */
+h1,h2,h3{font-family:var(--f-display); text-wrap:balance; margin:0}
+h1{font-size:clamp(38px,7vw,60px); line-height:1.02; font-weight:800; letter-spacing:-.025em}
+h2{font-size:clamp(25px,4vw,32px); line-height:1.14; font-weight:700; letter-spacing:-.018em; margin-bottom:6px}
+h3{font-size:19px; font-weight:600; letter-spacing:-.005em; margin:32px 0 6px}
+p{margin:0 0 17px}
+a{color:var(--accent); text-underline-offset:3px}
+.lede{font-size:20px; line-height:1.58; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-mono); font-size:11px; font-weight:500;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--accent); margin:0 0 12px;
+}
+.num{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3);
+  letter-spacing:.1em; display:block; margin-bottom:8px;
+}
+code{
+  font-family:var(--f-mono); font-size:.86em;
+  background:var(--surface-2); padding:1.5px 5px; border-radius:3px;
+  border:1px solid var(--rule);
+}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- masthead ---------- */
+header.top{
+  padding-block:64px 8px; max-width:var(--col); margin:0 auto;
+}
+.kicker{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 20px;
+  display:flex; gap:14px; flex-wrap:wrap;
+}
+.kicker b{color:var(--accent); font-weight:500}
+.specs{
+  display:flex; flex-wrap:wrap; gap:0; margin-top:34px;
+  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);
+}
+.specs div{
+  flex:1 1 128px; padding:14px 16px 15px; border-right:1px solid var(--rule);
+}
+.specs div:last-child{border-right:0}
+.specs dt{
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 4px;
+}
+.specs dd{
+  margin:0; font-family:var(--f-display); font-size:19px; font-weight:600;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---------- blocks ---------- */
+.callout{
+  border-left:2px solid var(--accent); background:var(--accent-soft);
+  padding:16px 20px; margin:24px 0; border-radius:0 4px 4px 0;
+}
+.callout.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.callout p:last-child{margin-bottom:0}
+.callout .tag{
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--accent); display:block; margin-bottom:5px;
+}
+.callout.warn .tag{color:var(--warn)}
+
+.scroll{overflow-x:auto; margin:26px 0; -webkit-overflow-scrolling:touch}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{
+  text-align:left; padding:9px 14px 9px 0; border-bottom:1px solid var(--rule);
+  vertical-align:top;
+}
+th{
+  font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-3); border-bottom:1px solid var(--rule-2);
+  padding-bottom:8px; white-space:nowrap;
+}
+td.m,th.m{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+td.r,th.r{text-align:right; padding-right:0}
+tr.total td{border-bottom:0; border-top:1px solid var(--rule-2); font-weight:600; padding-top:11px}
+.pin{color:var(--accent); font-weight:500}
+
+pre{
+  background:var(--surface); border:1px solid var(--rule); border-radius:5px;
+  padding:15px 17px; overflow-x:auto; margin:22px 0;
+  font-family:var(--f-mono); font-size:13px; line-height:1.66; color:var(--ink);
+}
+pre .c{color:var(--ink-3)}
+pre .k{color:var(--accent)}
+
+figure{margin:30px 0}
+figcaption{
+  font-family:var(--f-mono); font-size:11.5px; line-height:1.55; color:var(--ink-3);
+  margin-top:11px; max-width:64ch;
+}
+svg{max-width:100%; height:auto; display:block}
+
+ul.plain{list-style:none; padding:0; margin:18px 0}
+ul.plain li{
+  padding:11px 0 11px 26px; border-bottom:1px solid var(--rule); position:relative;
+}
+ul.plain li:last-child{border-bottom:0}
+ul.plain li::before{
+  content:""; position:absolute; left:4px; top:20px;
+  width:6px; height:6px; border-radius:50%; background:var(--accent);
+}
+ul.plain b{font-family:var(--f-display); font-weight:600}
+
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:5px; overflow:hidden; margin:26px 0}
+.grid2 > div{background:var(--surface); padding:17px 19px}
+.grid2 h4{font-family:var(--f-display); font-size:15px; font-weight:600; margin:0 0 6px}
+.grid2 p{font-size:14.5px; line-height:1.55; color:var(--ink-2); margin:0}
+
+/* ---------- chart ---------- */
+.chart{
+  background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+  padding:20px 20px 14px; box-shadow:var(--shadow);
+}
+.chart-title{font-family:var(--f-display); font-size:16px; font-weight:600; margin:0 0 2px}
+.chart-sub{font-family:var(--f-mono); font-size:11px; color:var(--ink-3); margin:0 0 16px; letter-spacing:.02em}
+#tip{
+  position:absolute; pointer-events:none; opacity:0; transition:opacity .12s;
+  background:var(--ink); color:var(--paper); font-family:var(--f-mono); font-size:11px;
+  padding:6px 9px; border-radius:4px; white-space:nowrap; transform:translate(-50%,-130%); z-index:5;
+}
+footer{
+  padding-block:40px 72px; color:var(--ink-3);
+  font-family:var(--f-mono); font-size:11.5px; letter-spacing:.04em;
+}
+@media (max-width:520px){
+  body{font-size:16px}
+  .specs div{flex-basis:50%; border-bottom:1px solid var(--rule)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+
+
+<header class="top">
+  <p class="kicker"><b>Build guide</b><span>Hardware + firmware</span><span>~$95</span><span>A weekend</span></p>
+  <h1>A toilet roll holder that reads the news</h1>
+  <p class="lede">Pull a sheet, hear a headline. An encoder counts the paper, a cached voice does the talking, and an e-ink panel prints what it just said. Here is the whole thing — the parts, the wiring, the maths that makes it actually work, and the three problems that are harder than they look.</p>
+
+  <dl class="specs">
+    <div><dt>Compute</dt><dd>Pi Zero 2 W</dd></div>
+    <div><dt>Sensing</dt><dd>0.015 mm</dd></div>
+    <div><dt>Latency</dt><dd>&lt;200 ms</dd></div>
+    <div><dt>Per roll</dt><dd>194 sheets</dd></div>
+  </dl>
+</header>
+
+<div class="perf"><span>How it works</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">01</span>
+    <h2>The signal chain</h2>
+    <p>Everything on the hot path — from hand to sound — is four steps long, and none of them touch the network. That is the entire trick.</p>
+  </section>
+</main>
+
+<figure class="wide">
+  <svg viewBox="0 0 900 216" role="img" aria-label="Signal chain: paper moves an idler wheel, a magnetic encoder counts it, geometry converts counts to millimetres, the motion engine emits sheet events, and a pre-cached WAV plays. A separate background loop fetches news and synthesizes speech every 25 minutes.">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--rule-2)" stroke-width="1.6"/>
+      </marker>
+      <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+      </marker>
+    </defs>
+
+    <!-- hot path -->
+    <text x="12" y="22" font-family="IBM Plex Mono,monospace" font-size="10" letter-spacing="1.6" fill="var(--accent)">HOT PATH — UNDER 200 ms</text>
+
+    <g font-family="IBM Plex Mono,monospace" font-size="11.5">
+      <g>
+        <rect x="12" y="36" width="146" height="62" rx="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.4"/>
+        <text x="26" y="60" fill="var(--ink)" font-size="12.5" font-weight="600">paper moves</text>
+        <text x="26" y="78" fill="var(--ink-2)">idler wheel turns</text>
+      </g>
+      <line x1="164" y1="67" x2="196" y2="67" stroke="var(--rule-2)" stroke-width="1.4" marker-end="url(#ar)"/>
+      <g>
+        <rect x="202" y="36" width="146" height="62" rx="4" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.2"/>
+        <text x="216" y="60" fill="var(--ink)" font-size="12.5" font-weight="600">AS5600</text>
+        <text x="216" y="78" fill="var(--ink-2)">4096 counts / rev</text>
+      </g>
+      <line x1="354" y1="67" x2="386" y2="67" stroke="var(--rule-2)" stroke-width="1.4" marker-end="url(#ar)"/>
+      <g>
+        <rect x="392" y="36" width="146" height="62" rx="4" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.2"/>
+        <text x="406" y="60" fill="var(--ink)" font-size="12.5" font-weight="600">geometry.py</text>
+        <text x="406" y="78" fill="var(--ink-2)">counts → mm</text>
+      </g>
+      <line x1="544" y1="67" x2="576" y2="67" stroke="var(--rule-2)" stroke-width="1.4" marker-end="url(#ar)"/>
+      <g>
+        <rect x="582" y="36" width="146" height="62" rx="4" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.2"/>
+        <text x="596" y="60" fill="var(--ink)" font-size="12.5" font-weight="600">motion.py</text>
+        <text x="596" y="78" fill="var(--ink-2)">mm → SHEET</text>
+      </g>
+      <line x1="734" y1="67" x2="766" y2="67" stroke="var(--rule-2)" stroke-width="1.4" marker-end="url(#ar)"/>
+      <g>
+        <rect x="772" y="36" width="116" height="62" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+        <text x="786" y="60" fill="var(--ink)" font-size="12.5" font-weight="600">play WAV</text>
+        <text x="786" y="78" fill="var(--ink-2)">already on disk</text>
+      </g>
+    </g>
+
+    <!-- perforated separator -->
+    <line x1="12" y1="128" x2="888" y2="128" stroke="var(--rule-2)" stroke-width="1.4" stroke-dasharray="2 6" stroke-linecap="round"/>
+
+    <text x="12" y="156" font-family="IBM Plex Mono,monospace" font-size="10" letter-spacing="1.6" fill="var(--ink-3)">COLD PATH — EVERY 25 MINUTES, IN THE BACKGROUND</text>
+    <g font-family="IBM Plex Mono,monospace" font-size="11.5">
+      <rect x="12" y="166" width="180" height="38" rx="4" fill="var(--surface-2)" stroke="var(--rule)" stroke-width="1.2"/>
+      <text x="26" y="190" fill="var(--ink-2)">fetch RSS · dedupe · rank</text>
+      <line x1="198" y1="185" x2="230" y2="185" stroke="var(--rule-2)" stroke-width="1.4" marker-end="url(#ar)"/>
+      <rect x="236" y="166" width="176" height="38" rx="4" fill="var(--surface-2)" stroke="var(--rule)" stroke-width="1.2"/>
+      <text x="250" y="190" fill="var(--ink-2)">cloud TTS × 12 ahead</text>
+      <line x1="418" y1="185" x2="450" y2="185" stroke="var(--rule-2)" stroke-width="1.4" marker-end="url(#ar)"/>
+      <rect x="456" y="166" width="160" height="38" rx="4" fill="var(--surface-2)" stroke="var(--rule)" stroke-width="1.2"/>
+      <text x="470" y="190" fill="var(--ink-2)">22 kHz mono WAV</text>
+    </g>
+    <path d="M616 185 L700 185 L700 112" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="3 4" marker-end="url(#ar2)"/>
+    <text x="710" y="189" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--accent)">fills the cache</text>
+  </svg>
+  <figcaption>The expensive work — network, ranking, speech synthesis — happens minutes before anyone touches the paper. A pull is nothing but a file read and a buffer append.</figcaption>
+</figure>
+
+<div class="perf"><span>The hard parts</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">02</span>
+    <h2>Problem one: the roll shrinks</h2>
+    <p>This is the one that bites everybody. The obvious build puts the encoder on the spindle and counts degrees per sheet. It works perfectly — for about a week.</p>
+    <p>A full roll is 110 mm across, so one revolution pays out <span class="tnum">346 mm</span> of paper: roughly three sheets. A bare core is 44 mm across, so one revolution pays out <span class="tnum">138 mm</span>: barely more than one sheet. The same rotation means two and a half different things depending on when you ask.</p>
+  </section>
+</main>
+
+<figure class="wide">
+  <svg viewBox="0 0 900 180" role="img" aria-label="Three rolls at 110mm, 77mm and 44mm diameter, showing 3.0, 2.1 and 1.2 sheets paid out per revolution.">
+    <g>
+      <circle cx="110" cy="86" r="62" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+      <circle cx="110" cy="86" r="25" fill="var(--paper)" stroke="var(--rule-2)" stroke-width="1.2"/>
+      <text x="110" y="168" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11.5" fill="var(--ink-2)">110 mm · 3.0 sheets/rev</text>
+      <text x="110" y="26" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" letter-spacing="1.4" fill="var(--ink-3)">FRESH</text>
+    </g>
+    <g>
+      <circle cx="300" cy="86" r="43.5" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+      <circle cx="300" cy="86" r="25" fill="var(--paper)" stroke="var(--rule-2)" stroke-width="1.2"/>
+      <text x="300" y="168" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11.5" fill="var(--ink-2)">77 mm · 2.1 sheets/rev</text>
+      <text x="300" y="26" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" letter-spacing="1.4" fill="var(--ink-3)">HALF</text>
+    </g>
+    <g>
+      <circle cx="460" cy="86" r="25" fill="var(--paper)" stroke="var(--rule-2)" stroke-width="1.4"/>
+      <text x="460" y="168" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11.5" fill="var(--ink-2)">44 mm · 1.2 sheets/rev</text>
+      <text x="460" y="26" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" letter-spacing="1.4" fill="var(--ink-3)">CORE</text>
+    </g>
+
+    <line x1="560" y1="30" x2="560" y2="150" stroke="var(--rule)" stroke-width="1"/>
+    <text x="592" y="62" font-family="Bricolage Grotesque,sans-serif" font-size="15" font-weight="600" fill="var(--ink)">Same rotation.</text>
+    <text x="592" y="84" font-family="Bricolage Grotesque,sans-serif" font-size="15" font-weight="600" fill="var(--ink)">Two and a half times</text>
+    <text x="592" y="106" font-family="Bricolage Grotesque,sans-serif" font-size="15" font-weight="600" fill="var(--ink)">the paper.</text>
+    <text x="592" y="132" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--ink-3)">A fixed deg-per-sheet constant</text>
+    <text x="592" y="147" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--ink-3)">cannot survive one roll.</text>
+  </svg>
+  <figcaption>Sheet length is fixed at 114 mm. Roll circumference is not. Calibrate on a fresh roll and by the end of it the holder reads you three headlines for one sheet.</figcaption>
+</figure>
+
+<div class="wide">
+  <div class="chart">
+    <p class="chart-title">What a fixed constant costs you</p>
+    <p class="chart-sub">Over-read of a spindle encoder calibrated once on a full roll · 194-sheet roll</p>
+    <div style="position:relative">
+      <svg id="errchart" viewBox="0 0 860 300" role="img" aria-label="Line chart: measurement error of a fixed constant rises from 0 percent at sheet zero to 41 percent by sheet 191."></svg>
+      <div id="tip"></div>
+    </div>
+  </div>
+  <figcaption style="font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); margin-top:11px">Generated by <code>SpindleLinearizer</code> in the repo — 0.36 mm paper on a 44 mm core. The error is small enough to ignore for a fortnight and then it isn't.</figcaption>
+</div>
+
+<main class="wrap">
+  <h3>Two ways out</h3>
+  <div class="grid2">
+    <div>
+      <h4>Idler wheel — recommended</h4>
+      <p>Stop measuring the roll; measure the paper. A 20 mm wheel riding on the sheet has a circumference that never changes, so mm-per-count is one constant you calibrate once and forget.</p>
+    </div>
+    <div>
+      <h4>Spindle + radius model</h4>
+      <p>Keep the encoder on the axle and integrate <code>dr/dθ = −t/2π</code> as paper leaves. No extra parts, needs a "new roll" button — and it gives you a sheets-remaining readout the idler can't.</p>
+    </div>
+  </div>
+
+  <pre><span class="c"># geometry.py — the spindle model, in four lines</span>
+dtheta = d_counts * <span class="k">2</span>*pi / counts_per_rev
+r0     = self.r
+r1     = r0 - self.t * dtheta / (<span class="k">2</span>*pi)      <span class="c"># radius shrinks as paper leaves</span>
+<span class="k">return</span> <span class="k">0.5</span> * (r0 + r1) * dtheta          <span class="c"># mean radius → exact to 2nd order</span></pre>
+
+  <div class="callout">
+    <span class="tag">Free feature</span>
+    <p>The radius model also tells you how much paper is left: the annulus area divided by paper thickness. That is the <span class="tnum">194-sheet</span> figure at the top of this page, and it is what the e-ink panel shows in standby. Nobody needs a toilet roll with a fuel gauge. Everybody wants one.</p>
+  </div>
+
+  <div class="perf"><span></span></div>
+
+  <section>
+    <span class="num">03</span>
+    <h2>Problem two: speech is slower than hands</h2>
+    <p>This one only shows up once you build it. A three-sheet pull takes about <span class="tnum">1.2 seconds</span>. Three spoken headlines take about <span class="tnum">13 seconds</span>. Queue them honestly, one per sheet, and the holder is still talking long after the person has finished, washed their hands and left the room.</p>
+    <p>I measured it on the bench build: one 342 mm pull produced 13.5 s of speech. The hand was done at 1.2 s.</p>
+  </section>
+</main>
+
+<figure class="wide">
+  <svg viewBox="0 0 860 132" role="img" aria-label="Timeline comparison: the pull lasts 1.2 seconds while three queued headlines last 13.5 seconds.">
+    <text x="0" y="16" font-family="IBM Plex Mono,monospace" font-size="10.5" letter-spacing="1.3" fill="var(--ink-3)">THE HAND</text>
+    <rect x="0" y="26" width="64" height="20" rx="3" fill="var(--accent)"/>
+    <text x="76" y="41" font-family="IBM Plex Mono,monospace" font-size="11.5" fill="var(--ink-2)">1.2 s — pull, tear, done</text>
+
+    <text x="0" y="76" font-family="IBM Plex Mono,monospace" font-size="10.5" letter-spacing="1.3" fill="var(--ink-3)">THE VOICE</text>
+    <rect x="0" y="86" width="238" height="20" rx="3" fill="var(--surface-2)" stroke="var(--rule-2)" stroke-width="1"/>
+    <rect x="240" y="86" width="238" height="20" rx="3" fill="var(--surface-2)" stroke="var(--rule-2)" stroke-width="1"/>
+    <rect x="480" y="86" width="238" height="20" rx="3" fill="var(--surface-2)" stroke="var(--rule-2)" stroke-width="1"/>
+    <text x="14" y="101" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--ink-2)">headline 1</text>
+    <text x="254" y="101" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--ink-2)">headline 2</text>
+    <text x="494" y="101" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--ink-2)">headline 3</text>
+    <text x="730" y="101" font-family="IBM Plex Mono,monospace" font-size="11.5" fill="var(--warn)">13.5 s</text>
+    <line x1="64" y1="20" x2="64" y2="118" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="70" y="126" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--accent)">room is empty from here</text>
+  </svg>
+  <figcaption>Measured on the bench with espeak. A natural cloud voice is a little faster, around 3.5 s a headline — which does not fix the shape of the problem.</figcaption>
+</figure>
+
+<main class="wrap">
+  <p>There is no clever fix, only honest levers. The build uses three:</p>
+  <ul class="plain">
+    <li><b>A speech backlog cap.</b> <code>audio.max_backlog_s: 20</code> — past twenty seconds of queued audio the engine refuses new headlines rather than narrate to an empty bathroom.</li>
+    <li><b>A pull cap.</b> <code>motion.max_queue: 4</code> — a toddler unspooling the whole roll gets four headlines, not ninety.</li>
+    <li><b>Shorter source material.</b> Feeds with terse headlines beat feeds with subordinate clauses. This matters more than either cap.</li>
+  </ul>
+
+  <div class="callout warn">
+    <span class="tag">Worth reconsidering</span>
+    <p>If you build this and find the overlap annoying, the fix is a different interaction, not a better queue: make sheets set the <em>depth</em> of one story rather than the <em>count</em> of stories. One sheet, the headline. Two, headline plus a sentence. Three, the whole piece. Same gesture, and it can never outrun the hand.</p>
+  </div>
+
+  <div class="perf"><span></span></div>
+
+  <section>
+    <span class="num">04</span>
+    <h2>Problem three: latency is the whole product</h2>
+    <p>If the first word lands more than about 200 ms after the paper starts moving, the thing feels broken, and no amount of voice quality rescues it. Two decisions protect that budget.</p>
+    <p><b>Speech is cached, never live.</b> A cloud TTS round trip is 600–2000 ms. So the twelve most likely headlines are synthesized right after each news refresh and normalised to 22 kHz mono WAV, which the Pi can start playing with no decode at all. A pull costs a file read and a buffer append.</p>
+    <p><b>The first headline fires early.</b> Waiting for a full 114 mm sheet means the person has already stopped pulling. So the first trigger of a pull is at 45 mm — about 40% of a sheet — and only subsequent ones use the full pitch. Sheet-counting purity loses to feel.</p>
+    <pre><span class="c"># motion.py</span>
+threshold = self.first_trigger_mm <span class="k">if</span> self._pull_sheets == <span class="k">0</span> \
+            <span class="k">else</span> self.sheet_mm</pre>
+    <p>One persistent <code>sounddevice</code> output stream stays open from boot, so the I2S clock never stops — which also kills the pop the MAX98357A makes when its bit clock starts and stops.</p>
+  </section>
+</main>
+
+<div class="perf"><span>Bill of materials</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">05</span>
+    <h2>What to buy</h2>
+    <p>Prices are rough US street prices and will have drifted. The sensor is the only line worth agonising over.</p>
+  </section>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead>
+      <tr><th>Part</th><th>Why this one</th><th class="r">Qty</th><th class="r">≈ USD</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>Raspberry Pi Zero 2 W</b></td><td>Quad core, real Linux, runs Piper offline if you want no cloud. Get the pre-soldered header version.</td><td class="m r">1</td><td class="m r">18</td></tr>
+      <tr><td>microSD card, 16 GB A1</td><td>A1 rating matters — the cheap cards make boot glacial.</td><td class="m r">1</td><td class="m r">8</td></tr>
+      <tr><td><b>AS5600 breakout</b></td><td>Contactless, 4096 counts/rev, no drag on the paper, nothing to wear out.</td><td class="m r">1</td><td class="m r">5</td></tr>
+      <tr><td>6 × 2.5 mm diametric magnet</td><td>Must be <em>diametrically</em> magnetised. An axial magnet reads as a dead sensor.</td><td class="m r">1</td><td class="m r">2</td></tr>
+      <tr><td><b>MAX98357A I2S amp</b></td><td>The Zero has no headphone jack. This is 3 W mono straight off the I2S bus.</td><td class="m r">1</td><td class="m r">6</td></tr>
+      <tr><td>40 mm 4 Ω 3 W speaker</td><td>Anything larger is wasted in a small tiled room.</td><td class="m r">1</td><td class="m r">4</td></tr>
+      <tr><td>Waveshare 2.9″ e-Paper HAT</td><td>296 × 128, partial refresh, holds its image at zero power.</td><td class="m r">1</td><td class="m r">23</td></tr>
+      <tr><td>USB-C 5 V 2.5 A supply</td><td>See the power note below — this wants wall power.</td><td class="m r">1</td><td class="m r">9</td></tr>
+      <tr><td>20 mm idler wheel + O-ring</td><td>3D printed hub, silicone O-ring for grip. The O-ring is the contact patch.</td><td class="m r">1</td><td class="m r">3</td></tr>
+      <tr><td>3 mm shaft, 2 × MR63 bearings</td><td>Low friction matters more than you'd think; drag makes the paper tear.</td><td class="m r">1</td><td class="m r">5</td></tr>
+      <tr><td>Torsion spring, light</td><td>Holds the idler against the paper. A rubber band works for the prototype.</td><td class="m r">1</td><td class="m r">1</td></tr>
+      <tr><td>Momentary button, wire, headers</td><td>Repeat / new-roll button, plus the usual box of bits.</td><td class="m r">—</td><td class="m r">7</td></tr>
+      <tr><td>Filament for the enclosure</td><td>PETG, not PLA — see the bathroom notes.</td><td class="m r">—</td><td class="m r">4</td></tr>
+      <tr class="total"><td>Total</td><td></td><td></td><td class="m r">≈ 95</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <div class="callout">
+    <span class="tag">The cheap version</span>
+    <p>You asked about a mouse scroll wheel, and it does work — the repo ships a <code>QuadratureSensor</code> driver for exactly that, and the cost is zero if you have a dead mouse in a drawer. Two warnings. Prefer a mouse with an <em>optical</em> wheel encoder (an IR gate straddling a slotted disc) over the cheap grey mechanical kind, which bounces and wears out. And if the wheel has a detent spring, take it out — detents make the paper pull feel notchy and add drag right where you don't want it. You also drop from 4096 counts per revolution to about 24, which is coarse but perfectly adequate at these distances.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">Power, honestly</span>
+    <p>A Pi Zero 2 W draws ~120 mA idling and ~350 mA talking, and it has no useful sleep state. A 5000 mAh pack gets you roughly a day and a half. This design wants a wall socket. If a battery is non-negotiable, the platform is wrong — an ESP32-S3 with streamed MP3 will idle for weeks, at the cost of writing the firmware in C++ and giving up offline speech.</p>
+  </div>
+</main>
+
+<div class="perf"><span>Wiring</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">06</span>
+    <h2>Pinout</h2>
+    <p>Three buses share the header and none of them collide. I2S takes 18/19/21, I2C takes 2/3, SPI and the e-paper control lines take 8/10/11/17/24/25, and the button sits on 16.</p>
+  </section>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Device</th><th>Signal</th><th class="m">BCM</th><th class="m">Header pin</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3"><b>MAX98357A</b></td><td>BCLK</td><td class="m pin">GPIO18</td><td class="m">12</td><td>PCM_CLK</td></tr>
+      <tr><td>LRCLK</td><td class="m pin">GPIO19</td><td class="m">35</td><td>PCM_FS</td></tr>
+      <tr><td>DIN</td><td class="m pin">GPIO21</td><td class="m">40</td><td>PCM_DOUT</td></tr>
+      <tr><td></td><td>VIN / GND</td><td class="m">5 V</td><td class="m">2 / 6</td><td>5 V, not 3.3 V — it's the amp rail</td></tr>
+      <tr><td></td><td>SD_MODE</td><td class="m">3.3 V</td><td class="m">1</td><td>tie high to un-mute; leave floating and you get silence</td></tr>
+      <tr><td rowspan="2"><b>AS5600</b></td><td>SDA</td><td class="m pin">GPIO2</td><td class="m">3</td><td rowspan="2">3.3 V rail; address 0x36</td></tr>
+      <tr><td>SCL</td><td class="m pin">GPIO3</td><td class="m">5</td></tr>
+      <tr><td rowspan="6"><b>2.9″ e-Paper</b></td><td>DIN (MOSI)</td><td class="m pin">GPIO10</td><td class="m">19</td><td rowspan="6">3.3 V rail</td></tr>
+      <tr><td>CLK (SCLK)</td><td class="m pin">GPIO11</td><td class="m">23</td></tr>
+      <tr><td>CS</td><td class="m pin">GPIO8</td><td class="m">24</td></tr>
+      <tr><td>DC</td><td class="m pin">GPIO25</td><td class="m">22</td></tr>
+      <tr><td>RST</td><td class="m pin">GPIO17</td><td class="m">11</td></tr>
+      <tr><td>BUSY</td><td class="m pin">GPIO24</td><td class="m">18</td></tr>
+      <tr><td><b>Button</b></td><td>to GND</td><td class="m pin">GPIO16</td><td class="m">36</td><td>internal pull-up, <code>gpiozero.Button</code></td></tr>
+      <tr><td><b>Mouse encoder</b><br><span style="color:var(--ink-3); font-size:13px">(instead of AS5600)</span></td><td>A / B / C</td><td class="m pin">GPIO5 / 6</td><td class="m">29 / 31</td><td>common pin to GND</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <pre><span class="c"># /boot/firmware/config.txt — the Zero has no analogue audio at all</span>
+dtparam=audio=off
+dtoverlay=hifiberry-dac   <span class="c"># speaks plain I2S; works with the MAX98357A</span>
+dtparam=i2s=on
+dtparam=i2c_arm=on
+dtparam=spi=on</pre>
+
+  <p>Then verify before you write a line of Python: <code>aplay -l</code> should list a hifiberry card, <code>i2cdetect -y 1</code> should show <code>36</code>, and <code>speaker-test -c1 -t sine -f 440 -l1</code> should make a noise. If any of those three fails, nothing downstream will work and you will waste an evening.</p>
+
+  <div class="perf"><span></span></div>
+
+  <section>
+    <span class="num">07</span>
+    <h2>The mechanical bit</h2>
+    <p>This is where the project is actually won or lost. The electronics are an afternoon; getting a wheel to track paper without tearing it took me longer than the software.</p>
+  </section>
+</main>
+
+<figure class="wide">
+  <svg viewBox="0 0 860 300" role="img" aria-label="Cross-section: the roll sits on a spindle, paper passes under a spring-loaded idler wheel with a diametric magnet in its axle, and the AS5600 sits 2mm below the magnet on a small PCB.">
+    <!-- roll -->
+    <circle cx="190" cy="120" r="78" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+    <circle cx="190" cy="120" r="27" fill="var(--paper)" stroke="var(--rule-2)" stroke-width="1.3"/>
+    <circle cx="190" cy="120" r="4" fill="var(--ink-3)"/>
+    <text x="190" y="124" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="var(--ink-3)" dy="-14">core</text>
+
+    <!-- paper path -->
+    <path d="M268 120 Q 330 138 390 168 L 470 205 L 470 285"
+          fill="none" stroke="var(--ink-2)" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M462 285 L 478 285" stroke="var(--ink-2)" stroke-width="2.2" stroke-linecap="round"/>
+    <text x="492" y="268" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--ink-2)">paper out</text>
+
+    <!-- idler wheel -->
+    <circle cx="392" cy="142" r="26" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
+    <circle cx="392" cy="142" r="20" fill="none" stroke="var(--rule-2)" stroke-width="1.2" stroke-dasharray="2 3"/>
+    <circle cx="392" cy="142" r="6" fill="var(--accent)"/>
+    <text x="392" y="100" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--ink)" font-weight="500">idler ⌀20</text>
+    <text x="392" y="86" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="var(--ink-3)">O-ring tyre</text>
+
+    <!-- spring arm -->
+    <path d="M392 142 L 470 98" stroke="var(--ink-2)" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="470" cy="98" r="5" fill="none" stroke="var(--ink-2)" stroke-width="2"/>
+    <path d="M470 98 q 22 -6 26 12 q 4 18 -14 20" fill="none" stroke="var(--warn)" stroke-width="1.8"/>
+    <text x="506" y="142" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--warn)">light torsion spring</text>
+    <text x="506" y="157" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="var(--ink-3)">enough to grip, not to tear</text>
+    <text x="484" y="92" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--ink-3)">pivot</text>
+
+    <!-- magnet + sensor -->
+    <line x1="392" y1="148" x2="392" y2="196" stroke="var(--rule-2)" stroke-width="1" stroke-dasharray="2 3"/>
+    <rect x="360" y="196" width="64" height="22" rx="3" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.2"/>
+    <text x="392" y="211" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="var(--ink)">AS5600</text>
+    <text x="434" y="182" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--accent)">⌀6 diametric magnet</text>
+    <text x="434" y="196" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--accent)">in the axle end</text>
+    <path d="M430 190 L 400 178" fill="none" stroke="var(--accent)" stroke-width="1"/>
+    <text x="434" y="228" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--ink-3)">1–3 mm air gap</text>
+
+    <!-- tear bar -->
+    <line x1="452" y1="228" x2="488" y2="228" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/>
+    <text x="352" y="234" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--ink-3)" text-anchor="end">tear bar ▸</text>
+
+    <text x="30" y="278" font-family="IBM Plex Mono,monospace" font-size="10" letter-spacing="1.4" fill="var(--ink-3)">SECTION THROUGH THE HOLDER</text>
+  </svg>
+  <figcaption>The idler rides on the paper just before the tear bar, where the sheet is under tension and flat. Its axle carries the magnet; the AS5600 sits on a small board 1–3 mm below, touching nothing.</figcaption>
+</figure>
+
+<main class="wrap">
+  <ul class="plain">
+    <li><b>Spring pressure is the tuning knob.</b> Too light and the wheel slips, under-counting; too heavy and it drags and the sheet tears at the perforation instead of pulling. Start too light and add tension until calibration runs repeat within 3%.</li>
+    <li><b>Put the wheel near the tear bar.</b> That is where the paper is flat and in tension. Ride it against the roll surface instead and you are back to a changing diameter, which is the bug you just solved.</li>
+    <li><b>The magnet must be diametrically magnetised.</b> An axially magnetised one of the same size reads as no magnet at all. The driver checks the AS5600 status register on startup and refuses to run with a bad gap, which saves a lot of guessing.</li>
+    <li><b>Print in PETG, not PLA.</b> A hot shower repeatedly is not kind to PLA, and a warped idler bracket ruins your calibration.</li>
+    <li><b>Separate the wet side from the dry side.</b> Electronics in a sealed upper compartment with the speaker firing through a downward-facing slot, so splashes and steam don't settle on the board. A thin coat of conformal spray on the Pi is cheap insurance.</li>
+    <li><b>Give the speaker a sealed back volume.</b> An open-backed 40 mm driver in a tiled room sounds like a phone in a bucket. Even a small closed chamber behind it helps enormously.</li>
+  </ul>
+
+  <div class="perf"><span>Software</span></div>
+
+  <section>
+    <span class="num">08</span>
+    <h2>Install, then calibrate</h2>
+    <pre><span class="c"># on a fresh Raspberry Pi OS Lite (Bookworm, 64-bit)</span>
+sudo bash hardware/setup-pi.sh
+sudo reboot
+
+<span class="c"># the step you cannot skip</span>
+sudo -u broadsheet /opt/broadsheet/.venv/bin/python \
+     /opt/broadsheet/tools/calibrate.py -c /etc/broadsheet/config.yaml</pre>
+    <p>Do not compute mm-per-count from the wheel diameter. The O-ring compresses, the paper slips a little, and your 20 mm wheel is really 19.6 mm. The calibration tool has you pull a measured length three times and prints the constant to paste into the config. If the three runs disagree by more than 3%, the wheel is slipping — add spring tension.</p>
+
+    <p>Everything runs on a laptop too, with no hardware at all:</p>
+    <pre>python3 tools/simulate_pull.py   <span class="c"># trace the gesture engine on synthetic pulls</span>
+python3 -m pytest tests/ -q      <span class="c"># 16 tests, no Pi required</span></pre>
+  </section>
+
+  <h3>The knobs that change how it feels</h3>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Setting</th><th class="m">Default</th><th>Turn it down / up</th></tr></thead>
+    <tbody>
+      <tr><td class="m">motion.first_trigger_mm</td><td class="m">45</td><td>Lower feels snappier and fires on accidental nudges. The single biggest lever on perceived quality.</td></tr>
+      <tr><td class="m">motion.noise_floor_mm</td><td class="m">3.0</td><td>Raise it if a draughty room or a passing door makes the holder mutter to itself.</td></tr>
+      <tr><td class="m">motion.idle_ms</td><td class="m">1500</td><td>How long a pause before the next pull counts as a new bulletin rather than a continuation.</td></tr>
+      <tr><td class="m">audio.max_backlog_s</td><td class="m">20</td><td>Lower if it keeps talking after people leave. This is the fix for problem two.</td></tr>
+      <tr><td class="m">news.gentle_mode</td><td class="m">true</td><td>Filters grim headlines. A bathroom at 7 a.m. is not the place to learn about a death toll.</td></tr>
+      <tr><td class="m">audio.quiet_hours</td><td class="m">22:00–07:00</td><td>Drops to 35% volume overnight instead of waking the house at 3 a.m.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <div class="perf"><span>Design notes</span></div>
+
+  <section>
+    <span class="num">09</span>
+    <h2>Decisions that aren't technical</h2>
+    <p>A talking object in a bathroom is socially strange in ways a spec sheet won't tell you. A few calls I'd defend:</p>
+    <ul class="plain">
+      <li><b>It never repeats itself.</b> Spoken headlines are logged with a 12-hour cooldown, so the second person in the morning gets different news from the first. Without this the device is a broken record by day three.</li>
+      <li><b>Gentle mode is on by default.</b> The blocklist is a blunt regex and it will over-filter. That is the right error to make in this room. It is one config flag away for anyone who disagrees.</li>
+      <li><b>A short press repeats the last headline.</b> The single most predictable failure is mishearing over running water. Repeat costs one button and one line of code.</li>
+      <li><b>Failure is quiet, not chatty.</b> No Wi-Fi means it plays the last cached bulletin and says nothing about it. An appliance that announces its own error states in a bathroom is intolerable.</li>
+      <li><b>The e-ink is the graceful degradation.</b> Quiet hours, guests, a houseguest who hates it — mute the audio and the panel still shows the headline. The thing keeps working with its voice off, which is a good test of whether a voice product is well designed.</li>
+      <li><b>It holds its last image at zero power.</b> When unplugged it doesn't go blank; it stays a small printed headline on the wall. That is a nicer object than a dark screen.</li>
+    </ul>
+  </section>
+
+  <div class="perf"><span>If you build it again</span></div>
+
+  <section>
+    <span class="num">10</span>
+    <h2>The second version</h2>
+    <p>Three things I'd change knowing what the first build taught me.</p>
+    <p><b>Depth, not count.</b> Sheets choosing how deep to go into one story beats sheets choosing how many stories, purely because it cannot outrun the hand. Same gesture, no queue problem, and it rewards a long pull with something better than more of the same.</p>
+    <p><b>ESP32-S3 for the shipping version.</b> The Pi is the right prototype — Python, real TTS options, a debugger. But it needs a wall socket, and a battery-powered version that idles for a month is a much better object. The port is a rewrite of <code>audio.py</code> and <code>tts.py</code> around streamed MP3; <code>geometry.py</code> and <code>motion.py</code> translate to C++ almost line for line.</p>
+    <p><b>A roll-diameter sensor.</b> One cheap IR reflectance sensor pointed at the roll would re-seed the radius model automatically and retire the "hold the button when you change the roll" step — the one piece of the interaction that asks the user to remember something.</p>
+  </section>
+</main>
+
+<div class="perf"><span>End</span></div>
+
+<footer class="wrap">
+  Broadsheet v0.1 · 16 tests, no hardware required · geometry.py is the file worth reading first
+</footer>
+
+<script>
+const DATA = [
+ {s:0,e:0},{s:10,e:1.1},{s:20,e:2.3},{s:30,e:3.5},{s:40,e:4.8},{s:51,e:6.1},
+ {s:61,e:7.6},{s:71,e:9.1},{s:81,e:10.7},{s:91,e:12.4},{s:101,e:14.2},
+ {s:111,e:16.2},{s:121,e:18.3},{s:131,e:20.6},{s:141,e:23.1},{s:151,e:25.8},
+ {s:161,e:28.9},{s:171,e:32.4},{s:181,e:36.5},{s:191,e:41.2}
+];
+(function(){
+  const svg = document.getElementById('errchart');
+  if(!svg) return;
+  const W=860,H=300, L=48,R=76,T=16,B=42;
+  const xmax=200, ymax=45;
+  const X = v => L + (v/xmax)*(W-L-R);
+  const Y = v => H-B - (v/ymax)*(H-T-B);
+  const ns='http://www.w3.org/2000/svg';
+  const el=(n,a)=>{const e=document.createElementNS(ns,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+  // grid + y labels
+  [0,10,20,30,40].forEach(v=>{
+    svg.appendChild(el('line',{x1:L,y1:Y(v),x2:W-R,y2:Y(v),
+      stroke:'var(--rule)','stroke-width':1}));
+    const t=el('text',{x:L-10,y:Y(v)+4,'text-anchor':'end',
+      'font-family':'IBM Plex Mono,monospace','font-size':11,fill:'var(--ink-3)'});
+    t.textContent = v+'%'; svg.appendChild(t);
+  });
+  // x labels
+  [0,50,100,150,194].forEach(v=>{
+    const t=el('text',{x:X(v),y:H-B+21,'text-anchor':'middle',
+      'font-family':'IBM Plex Mono,monospace','font-size':11,fill:'var(--ink-3)'});
+    t.textContent = v; svg.appendChild(t);
+  });
+  const ax=el('text',{x:L,y:H-8,'font-family':'IBM Plex Mono,monospace',
+    'font-size':10.5,fill:'var(--ink-3)','letter-spacing':'1.2'});
+  ax.textContent='SHEETS PULLED FROM ONE ROLL'; svg.appendChild(ax);
+
+  // area + line
+  const pts = DATA.map(d=>`${X(d.s)},${Y(d.e)}`).join(' ');
+  svg.appendChild(el('polygon',{points:`${X(0)},${Y(0)} ${pts} ${X(191)},${Y(0)}`,
+    fill:'var(--accent)','fill-opacity':0.09,stroke:'none'}));
+  svg.appendChild(el('polyline',{points:pts,fill:'none',stroke:'var(--accent-line)',
+    'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'}));
+
+  // endpoint emphasis + direct label
+  const last=DATA[DATA.length-1];
+  svg.appendChild(el('circle',{cx:X(last.s),cy:Y(last.e),r:4.5,
+    fill:'var(--accent)',stroke:'var(--surface)','stroke-width':2}));
+  const lbl=el('text',{x:X(last.s)+12,y:Y(last.e)-4,
+    'font-family':'Bricolage Grotesque,sans-serif','font-size':19,
+    'font-weight':700,fill:'var(--accent)'});
+  lbl.textContent='+41%'; svg.appendChild(lbl);
+  const lbl2=el('text',{x:X(last.s)+12,y:Y(last.e)+12,
+    'font-family':'IBM Plex Mono,monospace','font-size':10.5,fill:'var(--ink-3)'});
+  lbl2.textContent='by the core'; svg.appendChild(lbl2);
+
+  // hover
+  const tip=document.getElementById('tip');
+  const hl=el('line',{y1:T,y2:H-B,stroke:'var(--rule-2)','stroke-width':1,opacity:0});
+  const hd=el('circle',{r:4,fill:'var(--accent)',stroke:'var(--surface)','stroke-width':2,opacity:0});
+  svg.appendChild(hl); svg.appendChild(hd);
+  const hit=el('rect',{x:L,y:T,width:W-L-R,height:H-T-B,fill:'transparent'});
+  svg.appendChild(hit);
+  hit.addEventListener('pointermove',ev=>{
+    const r=svg.getBoundingClientRect();
+    const sx=(ev.clientX-r.left)*(W/r.width);
+    const v=((sx-L)/(W-L-R))*xmax;
+    let best=DATA[0];
+    for(const d of DATA) if(Math.abs(d.s-v)<Math.abs(best.s-v)) best=d;
+    hl.setAttribute('x1',X(best.s)); hl.setAttribute('x2',X(best.s));
+    hl.setAttribute('opacity',1);
+    hd.setAttribute('cx',X(best.s)); hd.setAttribute('cy',Y(best.e));
+    hd.setAttribute('opacity',1);
+    tip.style.opacity=1;
+    tip.style.left=(X(best.s)/W*r.width)+'px';
+    tip.style.top=(Y(best.e)/H*r.height)+'px';
+    tip.textContent=`sheet ${best.s} · +${best.e}% over-read`;
+  });
+  hit.addEventListener('pointerleave',()=>{
+    hl.setAttribute('opacity',0); hd.setAttribute('opacity',0); tip.style.opacity=0;
+  });
+})();
+</script>
+
+</body>
+</html>

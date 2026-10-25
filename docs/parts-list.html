@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Broadsheet Parts List</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500&display=swap">
+<style>
+:root{
+  --paper:#FAFAF7; --surface:#FFFFFF; --surface-2:#F1F3F2;
+  --ink:#131A1B; --ink-2:#53656A; --ink-3:#7E8E91;
+  --rule:#DCE3E2; --rule-2:#C3CECC;
+  --accent:#0D7268; --accent-soft:#E2F0ED;
+  --warn:#B8471E; --warn-soft:#FAEBE4;
+  --shadow:0 1px 2px rgba(19,26,27,.05), 0 8px 24px -12px rgba(19,26,27,.14);
+  --f-display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --col:69ch; --gutter:24px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0D1213; --surface:#151C1D; --surface-2:#1B2425;
+  --ink:#E4EAE8; --ink-2:#9BADAE; --ink-3:#74878A;
+  --rule:#263132; --rule-2:#33403F;
+  --accent:#4ECDBF; --accent-soft:#13312F;
+  --warn:#E98A5C; --warn-soft:#331C12;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --paper:#0D1213; --surface:#151C1D; --surface-2:#1B2425;
+  --ink:#E4EAE8; --ink-2:#9BADAE; --ink-3:#74878A;
+  --rule:#263132; --rule-2:#33403F;
+  --accent:#4ECDBF; --accent-soft:#13312F;
+  --warn:#E98A5C; --warn-soft:#331C12;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink); font-family:var(--f-body);
+  font-size:17px; line-height:1.62; margin:0; padding-block:0;
+  padding-inline:var(--gutter); -webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--col); margin:0 auto}
+.wide{max-width:900px; margin:0 auto}
+.perf{display:flex; align-items:center; gap:10px; margin-block:50px 34px; color:var(--ink-3)}
+.perf::before,.perf::after{content:""; flex:1; height:1px;
+  background-image:radial-gradient(circle, var(--rule-2) 1.1px, transparent 1.2px);
+  background-size:7px 7px; background-repeat:repeat-x; background-position:center}
+.perf span{font-family:var(--f-mono); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; white-space:nowrap}
+h1,h2{font-family:var(--f-display); text-wrap:balance; margin:0}
+h1{font-size:clamp(32px,6vw,50px); line-height:1.04; font-weight:800; letter-spacing:-.025em}
+h2{font-size:clamp(22px,3.6vw,28px); line-height:1.16; font-weight:700; letter-spacing:-.018em}
+h3{font-family:var(--f-display); font-size:18px; font-weight:600; margin:28px 0 6px}
+p{margin:0 0 16px}
+.lede{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.kicker{font-family:var(--f-mono); font-size:11px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 18px;
+  display:flex; gap:14px; flex-wrap:wrap}
+.kicker b{color:var(--accent); font-weight:500}
+header.top{padding-block:56px 8px; max-width:var(--col); margin:0 auto}
+code{font-family:var(--f-mono); font-size:.86em; background:var(--surface-2);
+  padding:1.5px 5px; border-radius:3px; border:1px solid var(--rule)}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- section head with live tally ---------- */
+.sec{margin:34px 0 0}
+.sechead{display:flex; align-items:baseline; justify-content:space-between;
+  gap:16px; flex-wrap:wrap; padding-bottom:10px; border-bottom:1px solid var(--rule-2)}
+.sechead .t{font-family:var(--f-display); font-size:19px; font-weight:600}
+.sechead .n{font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  letter-spacing:.04em; font-variant-numeric:tabular-nums}
+.sechead .n b{color:var(--accent); font-weight:500}
+.seclede{font-size:15px; color:var(--ink-2); margin:10px 0 0; line-height:1.5}
+
+/* ---------- line items ---------- */
+.item{display:grid; grid-template-columns:26px 1fr auto; gap:0 12px;
+  padding:13px 0; border-bottom:1px solid var(--rule); align-items:start}
+.item input[type=checkbox]{width:17px; height:17px; margin:3px 0 0; accent-color:var(--accent); cursor:pointer}
+.item .nm{font-family:var(--f-display); font-size:15.5px; font-weight:600; line-height:1.35}
+.item .no{font-family:var(--f-mono); font-size:12px; color:var(--ink-3);
+  line-height:1.5; margin-top:3px; grid-column:2}
+.item .pr{font-family:var(--f-mono); font-size:14px; font-variant-numeric:tabular-nums;
+  text-align:right; white-space:nowrap}
+.item.done .nm,.item.done .pr{text-decoration:line-through; color:var(--ink-3)}
+.item.done .no{opacity:.55}
+label.nm{cursor:pointer}
+.subtotal{display:flex; justify-content:space-between; padding:13px 0 0;
+  font-family:var(--f-display); font-weight:600; font-size:16px}
+.subtotal .v{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+
+.totals{display:grid; grid-template-columns:1fr auto auto; gap:0 20px;
+  margin:28px 0; border:1px solid var(--rule); border-radius:6px;
+  padding:18px 20px; background:var(--surface); box-shadow:var(--shadow)}
+.totals div{padding:7px 0; font-family:var(--f-mono); font-size:13.5px;
+  font-variant-numeric:tabular-nums; border-bottom:1px solid var(--rule)}
+.totals div.h{font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); border-bottom:1px solid var(--rule-2)}
+.totals div.f{border-bottom:0; font-family:var(--f-display); font-weight:700; font-size:17px}
+.totals .r{text-align:right}
+
+.callout{border-left:2px solid var(--accent); background:var(--accent-soft);
+  padding:15px 19px; margin:22px 0; border-radius:0 4px 4px 0}
+.callout.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.callout p:last-child{margin-bottom:0}
+.callout .tag{font-family:var(--f-mono); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--accent); display:block; margin-bottom:5px}
+.callout.warn .tag{color:var(--warn)}
+ul.plain{list-style:none; padding:0; margin:16px 0}
+ul.plain li{padding:10px 0 10px 24px; border-bottom:1px solid var(--rule); position:relative}
+ul.plain li:last-child{border-bottom:0}
+ul.plain li::before{content:""; position:absolute; left:3px; top:19px; width:6px;
+  height:6px; border-radius:50%; background:var(--accent)}
+ul.plain b{font-family:var(--f-display); font-weight:600}
+.gone{opacity:.72}
+.gone .nm{text-decoration:line-through}
+footer{padding-block:34px 66px; color:var(--ink-3); font-family:var(--f-mono);
+  font-size:11.5px; letter-spacing:.04em}
+@media (max-width:520px){
+  body{font-size:16px}
+  .item{grid-template-columns:24px 1fr; }
+  .item .pr{grid-column:2; text-align:left; margin-top:4px; color:var(--ink-2)}
+  .item .no{grid-column:2}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <p class="kicker"><b>Parts list</b><span>Scroll-wheel build</span><span>Updated</span></p>
+  <h1>What to order</h1>
+  <p class="lede">The sensing decision is settled: uxcell 25-pack, declicked, riding the top of the roll. Everything mechanical and audio is shared between the two platforms, so most of this can be ordered before you've picked one.</p>
+</header>
+
+<main class="wide">
+
+  <div class="sec">
+    <div class="sechead">
+      <span class="t">1 · Shared</span>
+      <span class="n" id="n-shared">0 of 10 · <b>$0.00</b> of $43.99</span>
+    </div>
+    <p class="seclede">Sensing, the follower assembly, and audio. Identical on the Pi and the ESP32 — order it now whichever way you go.</p>
+
+    <div class="item" data-sec="shared" data-price="9.99">
+      <input type="checkbox" id="p1"><label class="nm" for="p1">uxcell 25-pack mouse encoders</label>
+      <span class="pr">$9.99</span>
+      <span class="no">Use the <b>13 mm</b> height — the shorter ones put the metal can into the paper. Declick before fitting.</span>
+    </div>
+    <div class="item" data-sec="shared" data-price="6.00">
+      <input type="checkbox" id="p2"><label class="nm" for="p2">3 mm shaft + 2× MR63ZZ bearings</label>
+      <span class="pr">$6.00</span>
+      <span class="no">Arm pivot and wheel axle. Low friction matters more than you'd think — drag tears paper.</span>
+    </div>
+    <div class="item" data-sec="shared" data-price="1.00">
+      <input type="checkbox" id="p3"><label class="nm" for="p3">Light torsion spring</label>
+      <span class="pr">$1.00</span>
+      <span class="no">Target 5–15 gf at the contact patch. A rubber band works for the first prototype.</span>
+    </div>
+    <div class="item" data-sec="shared" data-price="3.00">
+      <input type="checkbox" id="p4"><label class="nm" for="p4">O-rings, ~17 mm ID × 2 mm section</label>
+      <span class="pr">$3.00</span>
+      <span class="no">The tyre. Over a ~17 mm printed hub this lands the wheel near 21 mm. Buy a mixed pack; exact size doesn't matter, calibration absorbs it.</span>
+    </div>
+    <div class="item" data-sec="shared" data-price="1.00">
+      <input type="checkbox" id="p5"><label class="nm" for="p5">2× 10 kΩ resistor, 2× 10 nF capacitor</label>
+      <span class="pr">$1.00</span>
+      <span class="no">Debounce on encoder A and B. Not 100 nF — that's a 1 ms constant and smears a fast pull.</span>
+    </div>
+    <div class="item" data-sec="shared" data-price="6.00">
+      <input type="checkbox" id="p6"><label class="nm" for="p6">MAX98357A I2S amp breakout</label>
+      <span class="pr">$6.00</span>
+      <span class="no">Same part on both platforms. Neither board has analogue audio out.</span>
+    </div>
+    <div class="item" data-sec="shared" data-price="4.00">
+      <input type="checkbox" id="p7"><label class="nm" for="p7">40 mm 4 Ω 3 W speaker</label>
+      <span class="pr">$4.00</span>
+      <span class="no">Give it a sealed back volume or it sounds like a phone in a bucket.</span>
+    </div>
+    <div class="item" data-sec="shared" data-price="1.00">
+      <input type="checkbox" id="p8"><label class="nm" for="p8">Momentary tactile button</label>
+      <span class="pr">$1.00</span>
+      <span class="no">Short press repeats the last headline; hold two seconds for a new roll.</span>
+    </div>
+    <div class="item" data-sec="shared" data-price="7.00">
+      <input type="checkbox" id="p9"><label class="nm" for="p9">Wire, JST-PH connectors, heat shrink</label>
+      <span class="pr">$7.00</span>
+      <span class="no">Run A/B as a twisted pair, routed away from the speaker leads. Use connectors — you'll open this repeatedly.</span>
+    </div>
+    <div class="item" data-sec="shared" data-price="5.00">
+      <input type="checkbox" id="p10"><label class="nm" for="p10">PETG filament</label>
+      <span class="pr">$5.00</span>
+      <span class="no">Not PLA. Repeated hot showers warp it, and a warped arm ruins your calibration.</span>
+    </div>
+    <div class="subtotal"><span>Shared subtotal</span><span class="v">$43.99</span></div>
+  </div>
+
+  <div class="sec">
+    <div class="sechead">
+      <span class="t">2 · Raspberry Pi Zero 2 W route</span>
+      <span class="n" id="n-pi">0 of 7 · <b>$0.00</b> of $72.00</span>
+    </div>
+    <p class="seclede">Build this one first. Python on real Linux is where you want to be while the interaction is still open.</p>
+
+    <div class="item" data-sec="pi" data-price="18.00">
+      <input type="checkbox" id="q1"><label class="nm" for="q1">Raspberry Pi Zero 2 W, with header</label>
+      <span class="pr">$18.00</span>
+      <span class="no">Get the pre-soldered header version.</span>
+    </div>
+    <div class="item" data-sec="pi" data-price="8.00">
+      <input type="checkbox" id="q2"><label class="nm" for="q2">microSD 16 GB, A1 rated</label>
+      <span class="pr">$8.00</span>
+      <span class="no">A1 matters — cheap cards make boot glacial.</span>
+    </div>
+    <div class="item" data-sec="pi" data-price="20.00">
+      <input type="checkbox" id="q3"><label class="nm" for="q3">5 V <b>2 A</b> boost + LiPo charger</label>
+      <span class="pr">$20.00</span>
+      <span class="no">2 A, not 1 A — Pi and amp peaks coincide at ~1.55 A. Must have load sharing and an LBO pin.</span>
+    </div>
+    <div class="item" data-sec="pi" data-price="20.00">
+      <input type="checkbox" id="q4"><label class="nm" for="q4">LiPo 3.7 V 20,000 mAh</label>
+      <span class="pr">$20.00</span>
+      <span class="no">5.4 days per charge. A 10,000 mAh cell is cheaper but drops you to 2.7 days.</span>
+    </div>
+    <div class="item" data-sec="pi" data-price="3.00">
+      <input type="checkbox" id="q5"><label class="nm" for="q5">USB-C breakout</label>
+      <span class="pr">$3.00</span>
+      <span class="no">Skip if your charger board already has USB-C.</span>
+    </div>
+    <div class="item" data-sec="pi" data-price="2.00">
+      <input type="checkbox" id="q6"><label class="nm" for="q6">1000 µF electrolytic + 100 nF</label>
+      <span class="pr">$2.00</span>
+      <span class="no">Bulk and decoupling across the amp's 5 V rail.</span>
+    </div>
+    <div class="item" data-sec="pi" data-price="1.00">
+      <input type="checkbox" id="q7"><label class="nm" for="q7">SPDT slide switch</label>
+      <span class="pr">$1.00</span>
+      <span class="no">On the charger's EN pin — a real off switch.</span>
+    </div>
+    <div class="subtotal"><span>Pi subtotal</span><span class="v">$72.00</span></div>
+  </div>
+
+  <div class="sec">
+    <div class="sechead">
+      <span class="t">3 · ESP32-S3 route</span>
+      <span class="n" id="n-esp">0 of 4 · <b>$0.00</b> of $26.00</span>
+    </div>
+    <p class="seclede">Later, once you've stopped changing your mind about the interaction. No boost converter here — its quiescent current alone would swamp the sleep budget.</p>
+
+    <div class="item" data-sec="esp" data-price="15.00">
+      <input type="checkbox" id="r1"><label class="nm" for="r1">ESP32-S3 board with LiPo charging</label>
+      <span class="pr">$15.00</span>
+      <span class="no">Needs a JST-PH battery connector and onboard charging. 8 MB flash minimum. Adafruit ESP32-S3 Feather, Unexpected Maker TinyS3, Seeed XIAO ESP32S3.</span>
+    </div>
+    <div class="item" data-sec="esp" data-price="9.00">
+      <input type="checkbox" id="r2"><label class="nm" for="r2">LiPo 3.7 V 2000 mAh</label>
+      <span class="pr">$9.00</span>
+      <span class="no">About 97 days a charge. With a protection board.</span>
+    </div>
+    <div class="item" data-sec="esp" data-price="1.00">
+      <input type="checkbox" id="r3"><label class="nm" for="r3">2× 100 kΩ resistor</label>
+      <span class="pr">$1.00</span>
+      <span class="no">Battery sense divider into ADC1.</span>
+    </div>
+    <div class="item" data-sec="esp" data-price="1.00">
+      <input type="checkbox" id="r4"><label class="nm" for="r4">470 µF + 100 nF</label>
+      <span class="pr">$1.00</span>
+      <span class="no">Bulk and decoupling at the amp, which runs straight off the cell.</span>
+    </div>
+    <div class="subtotal"><span>ESP32 subtotal</span><span class="v">$26.00</span></div>
+  </div>
+
+  <div class="totals">
+    <div class="h"></div><div class="h r">Pi Zero 2 W</div><div class="h r">ESP32-S3</div>
+    <div>Shared</div><div class="r">$43.99</div><div class="r">$43.99</div>
+    <div>Platform</div><div class="r">$72.00</div><div class="r">$26.00</div>
+    <div class="f">Total</div><div class="f r">$115.99</div><div class="f r">$69.99</div>
+  </div>
+
+  <div class="perf"><span>No longer on the list</span></div>
+
+  <ul class="plain gone">
+    <li><b class="nm">AS5600 breakout + diametric magnet</b> — ~$7. Only needed if the declick fails, and a successful declick removes the detent problem entirely rather than working around it. Order it that day if the flick test goes badly.</li>
+    <li><b class="nm">Waveshare 2.9″ e-Paper HAT</b> — $23. Removed at your request. The low-paper readout it used to show is spoken instead, once, below twelve sheets.</li>
+    <li><b class="nm">Salvaged mouse</b> — the $0 option. Replaced by the uxcell pack, which costs $10 and saves you from soldering onto a dead mouse's PCB and guessing at the height.</li>
+  </ul>
+
+  <div class="perf"><span>Notes that will save you an evening</span></div>
+
+  <div class="callout">
+    <span class="tag">On the encoder pack</span>
+    <p>The <span class="tnum">5/7/9/11/13 mm</span> in that listing is the <strong>height</strong> — mounting plane to wheel axis — not resolution. Your 21 mm wheel has a 10.5 mm radius, so only the 13 mm has real clearance and the 11 mm has none to spare. Effectively you're buying 25 to get about 10 usable, which is still five times cheaper per usable part than the 2-pack.</p>
+    <p>The listing says "Movement Detection Technology: Optical". It isn't — metal can, hex rotor, contact encoder. The same table claims "Connectivity Technology: USB" for a through-hole component, so treat the whole attribute block as decoration.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">Do this before building the arm</span>
+    <p>Declick one, then flick the hex rotor with a fingernail. A declicked encoder <strong>coasts</strong>; a detented one stops dead at the next click. Then press a wheel on, hold it against a roll with the pressure of a couple of coins, and drag the paper — it should roll smoothly with no skid.</p>
+    <p>If that fails across several units, that's your signal to order the AS5600. Don't discover it after the arm is built.</p>
+  </div>
+
+  <h3>Tools, if you don't have them</h3>
+  <ul class="plain">
+    <li><b>Fine needle-nose pliers</b> — for bending the encoder can's tabs during the declick.</li>
+    <li><b>Digital calipers</b> — measure the hex across the flats before you model the wheel hub. It may differ between heights.</li>
+    <li><b>Multimeter</b> — identify the common pin (almost certainly the middle one) by continuity while rotating slowly.</li>
+  </ul>
+
+  <div class="callout">
+    <span class="tag">Why the totals moved</span>
+    <p>Up $11 on the Pi and $8 on the ESP32 against what the earlier docs said. Two reasons, both bookkeeping: the encoder went from a $0–3 salvaged mouse to the $9.99 pack, and the printed wheel and O-ring is now its own line instead of being folded into "idler wheel". Nothing else changed, and the AS5600 coming off partly offsets it.</p>
+  </div>
+
+</main>
+
+<footer class="wrap">
+  Broadsheet · scroll-wheel sensing, declicked, riding the top of the roll · tick boxes as you order
+</footer>
+
+<script>
+(function(){
+  const SEC = {
+    shared:{el:document.getElementById('n-shared')},
+    pi:{el:document.getElementById('n-pi')},
+    esp:{el:document.getElementById('n-esp')},
+  };
+  const items = Array.from(document.querySelectorAll('.item[data-sec]'));
+  function money(v){ return '$' + v.toFixed(2); }
+  function update(){
+    for(const k in SEC){ SEC[k].n=0; SEC[k].t=0; SEC[k].sum=0; SEC[k].all=0; }
+    for(const it of items){
+      const s = SEC[it.dataset.sec]; if(!s) continue;
+      const price = parseFloat(it.dataset.price);
+      const box = it.querySelector('input');
+      s.t++; s.all += price;
+      if(box.checked){ s.n++; s.sum += price; it.classList.add('done'); }
+      else it.classList.remove('done');
+    }
+    for(const k in SEC){
+      const s = SEC[k];
+      s.el.innerHTML = `${s.n} of ${s.t} · <b>${money(s.sum)}</b> of ${money(s.all)}`;
+    }
+  }
+  items.forEach(it => it.querySelector('input').addEventListener('change', update));
+  update();
+})();
+</script>
+</body>
+</html>

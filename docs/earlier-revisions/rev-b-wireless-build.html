@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Broadsheet — Wireless Build</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500&display=swap">
+<style>
+:root{
+  --paper:#FAFAF7; --surface:#FFFFFF; --surface-2:#F1F3F2;
+  --ink:#131A1B; --ink-2:#53656A; --ink-3:#7E8E91;
+  --rule:#DCE3E2; --rule-2:#C3CECC;
+  --accent:#0D7268; --accent-soft:#E2F0ED;
+  --warn:#B8471E; --warn-soft:#FAEBE4;
+  --pos:#B8471E; --neg:#2D3E41;
+  --shadow:0 1px 2px rgba(19,26,27,.05), 0 8px 24px -12px rgba(19,26,27,.14);
+  --f-display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --col:69ch; --gutter:24px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0D1213; --surface:#151C1D; --surface-2:#1B2425;
+  --ink:#E4EAE8; --ink-2:#9BADAE; --ink-3:#74878A;
+  --rule:#263132; --rule-2:#33403F;
+  --accent:#4ECDBF; --accent-soft:#13312F;
+  --warn:#E98A5C; --warn-soft:#331C12;
+  --pos:#E98A5C; --neg:#93A5A6;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --paper:#0D1213; --surface:#151C1D; --surface-2:#1B2425;
+  --ink:#E4EAE8; --ink-2:#9BADAE; --ink-3:#74878A;
+  --rule:#263132; --rule-2:#33403F;
+  --accent:#4ECDBF; --accent-soft:#13312F;
+  --warn:#E98A5C; --warn-soft:#331C12;
+  --pos:#E98A5C; --neg:#93A5A6;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink); font-family:var(--f-body);
+  font-size:17px; line-height:1.62; margin:0; padding-block:0;
+  padding-inline:var(--gutter); -webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--col); margin:0 auto}
+.wide{max-width:980px; margin:0 auto}
+.perf{display:flex; align-items:center; gap:10px; margin-block:56px 40px; color:var(--ink-3)}
+.perf::before,.perf::after{content:""; flex:1; height:1px;
+  background-image:radial-gradient(circle, var(--rule-2) 1.1px, transparent 1.2px);
+  background-size:7px 7px; background-repeat:repeat-x; background-position:center}
+.perf span{font-family:var(--f-mono); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; white-space:nowrap}
+h1,h2,h3{font-family:var(--f-display); text-wrap:balance; margin:0}
+h1{font-size:clamp(34px,6.4vw,54px); line-height:1.03; font-weight:800; letter-spacing:-.025em}
+h2{font-size:clamp(24px,4vw,31px); line-height:1.14; font-weight:700; letter-spacing:-.018em; margin-bottom:6px}
+h3{font-size:18.5px; font-weight:600; margin:30px 0 6px}
+p{margin:0 0 17px}
+.lede{font-size:20px; line-height:1.58; color:var(--ink-2)}
+.num{font-family:var(--f-mono); font-size:12px; color:var(--ink-3);
+  letter-spacing:.1em; display:block; margin-bottom:8px}
+.kicker{font-family:var(--f-mono); font-size:11px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 20px;
+  display:flex; gap:14px; flex-wrap:wrap}
+.kicker b{color:var(--accent); font-weight:500}
+code{font-family:var(--f-mono); font-size:.86em; background:var(--surface-2);
+  padding:1.5px 5px; border-radius:3px; border:1px solid var(--rule)}
+.tnum{font-variant-numeric:tabular-nums}
+header.top{padding-block:60px 8px; max-width:var(--col); margin:0 auto}
+.specs{display:flex; flex-wrap:wrap; margin-top:32px;
+  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.specs div{flex:1 1 124px; padding:14px 16px 15px; border-right:1px solid var(--rule)}
+.specs div:last-child{border-right:0}
+.specs dt{font-family:var(--f-mono); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 4px}
+.specs dd{margin:0; font-family:var(--f-display); font-size:18px; font-weight:600;
+  font-variant-numeric:tabular-nums}
+.callout{border-left:2px solid var(--accent); background:var(--accent-soft);
+  padding:16px 20px; margin:24px 0; border-radius:0 4px 4px 0}
+.callout.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.callout p:last-child{margin-bottom:0}
+.callout .tag{font-family:var(--f-mono); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--accent); display:block; margin-bottom:5px}
+.callout.warn .tag{color:var(--warn)}
+.scroll{overflow-x:auto; margin:26px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px}
+th,td{text-align:left; padding:9px 14px 9px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+th{font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-3); border-bottom:1px solid var(--rule-2);
+  padding-bottom:8px; white-space:nowrap}
+td.m,th.m{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+td.r,th.r{text-align:right; padding-right:0}
+tr.total td{border-bottom:0; border-top:1px solid var(--rule-2); font-weight:600; padding-top:11px}
+tr.grp td{background:var(--surface-2); font-family:var(--f-mono); font-size:10px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); padding:7px 14px 7px 8px}
+.pin{color:var(--accent); font-weight:500}
+pre{background:var(--surface); border:1px solid var(--rule); border-radius:5px;
+  padding:15px 17px; overflow-x:auto; margin:22px 0; font-family:var(--f-mono);
+  font-size:13px; line-height:1.66}
+pre .c{color:var(--ink-3)} pre .k{color:var(--accent)}
+figure{margin:30px 0}
+figcaption{font-family:var(--f-mono); font-size:11.5px; line-height:1.55;
+  color:var(--ink-3); margin-top:11px; max-width:66ch}
+svg{max-width:100%; height:auto; display:block}
+.board{background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+  padding:18px; box-shadow:var(--shadow)}
+ul.plain{list-style:none; padding:0; margin:18px 0}
+ul.plain li{padding:11px 0 11px 26px; border-bottom:1px solid var(--rule); position:relative}
+ul.plain li:last-child{border-bottom:0}
+ul.plain li::before{content:""; position:absolute; left:4px; top:20px; width:6px;
+  height:6px; border-radius:50%; background:var(--accent)}
+ul.plain b{font-family:var(--f-display); font-weight:600}
+ol.steps{counter-reset:s; list-style:none; padding:0; margin:20px 0}
+ol.steps li{counter-increment:s; position:relative; padding:0 0 18px 42px}
+ol.steps li::before{content:counter(s); position:absolute; left:0; top:1px;
+  font-family:var(--f-mono); font-size:11px; width:24px; height:24px;
+  border:1px solid var(--rule-2); border-radius:50%; display:flex;
+  align-items:center; justify-content:center; color:var(--accent)}
+footer{padding-block:36px 70px; color:var(--ink-3); font-family:var(--f-mono);
+  font-size:11.5px; letter-spacing:.04em}
+@media (max-width:520px){body{font-size:16px} .specs div{flex-basis:50%; border-bottom:1px solid var(--rule)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <p class="kicker"><b>Revision B</b><span>Battery powered</span><span>No display</span><span>≈$116</span></p>
+  <h1>Wireless build: schematic, layout, parts</h1>
+  <p class="lede">E-ink removed, scroll wheel moved to the top of the roll, and the cable cut. Three changes, one of which is free, one of which is better than what it replaced, and one of which costs you a charging habit.</p>
+  <dl class="specs">
+    <div><dt>Sensing</dt><dd>2.75 mm</dd></div>
+    <div><dt>Idle draw</dt><dd>101 mA</dd></div>
+    <div><dt>Runtime</dt><dd>5.4 days</dd></div>
+    <div><dt>GPIO used</dt><dd>8 pins</dd></div>
+  </dl>
+</header>
+
+<div class="perf"><span>Your sensing plan</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">01</span>
+    <h2>Riding the top of the roll is the right call</h2>
+    <p>It's better than what I proposed, and worth being precise about why, because it looks like it shouldn't work.</p>
+    <p>A wheel resting on the roll doesn't measure <em>angle</em> — it measures <em>surface travel</em>. The paper leaving the roll and the surface passing under the wheel are the same material moving at the same speed. So the wheel turns once per <span class="tnum">π × 21 mm</span> of paper no matter how fat the roll is. The diameter cancels out of the equation completely.</p>
+  </section>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Roll diameter</th><th class="r">Paper paid out<br>in one roll turn</th><th class="r">Wheel turns</th><th class="r">Counts</th><th class="r">Length read</th><th class="r">Error</th></tr></thead>
+    <tbody>
+      <tr><td class="m">110 mm (fresh)</td><td class="m r">345.6 mm</td><td class="m r">5.24</td><td class="m r">125.7</td><td class="m r">345.6 mm</td><td class="m r" style="color:var(--accent)">0.00%</td></tr>
+      <tr><td class="m">95 mm</td><td class="m r">298.5 mm</td><td class="m r">4.52</td><td class="m r">108.6</td><td class="m r">298.5 mm</td><td class="m r" style="color:var(--accent)">0.00%</td></tr>
+      <tr><td class="m">80 mm</td><td class="m r">251.3 mm</td><td class="m r">3.81</td><td class="m r">91.4</td><td class="m r">251.3 mm</td><td class="m r" style="color:var(--accent)">0.00%</td></tr>
+      <tr><td class="m">65 mm</td><td class="m r">204.2 mm</td><td class="m r">3.10</td><td class="m r">74.3</td><td class="m r">204.2 mm</td><td class="m r" style="color:var(--accent)">0.00%</td></tr>
+      <tr><td class="m">44 mm (core)</td><td class="m r">138.2 mm</td><td class="m r">2.10</td><td class="m r">50.3</td><td class="m r">138.2 mm</td><td class="m r" style="color:var(--accent)">0.00%</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <p>Exact at every diameter. The whole <code>SpindleLinearizer</code> radius model is now dead weight in your build — it stays in the repo, tested, in case you ever want a paper gauge from the axle, but nothing calls it. Two tests were added that assert this directly.</p>
+
+  <h3>What it costs, and these are real</h3>
+  <ul class="plain">
+    <li><b>The arm needs 33 mm of sprung travel.</b> The contact point drops from r=55 mm to r=22 mm over one roll. A 70 mm follower arm sweeps that in about 40°, from 65° to 27° off vertical. Short arms won't reach the core; that's the number that sizes the mechanism.</li>
+    <li><b>It counts roll spin, not hand pulls.</b> Yank hard and the roll overspins, dumping slack the wheel dutifully measures. That paper genuinely left the roll, so it isn't wrong exactly — but it's why <code>max_queue: 4</code> and <code>max_backlog_s: 20</code> matter more in this version than the last.</li>
+    <li><b>Contact pressure is the tuning knob.</b> Too light and it slips and under-counts; too heavy and it compresses the outer layers and tears the sheet at the perforation instead of turning. Start light, add tension until three calibration runs agree within 3%.</li>
+    <li><b>Resolution drops to 2.75 mm per count.</b> Fine for 114 mm sheets, but the old 3 mm noise floor was under one count — a single spurious edge would have fired a headline. Default is now 6 mm (two counts).</li>
+  </ul>
+</main>
+
+<div class="perf"><span>Parts</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">02</span>
+    <h2>Everything you need to buy</h2>
+    <p>Changes from the tethered version are marked. Prices are rough US street prices.</p>
+  </section>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Part</th><th>Spec / why</th><th class="r">Qty</th><th class="r">≈USD</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="4">Compute</td></tr>
+      <tr><td><b>Raspberry Pi Zero 2 W</b></td><td>Pre-soldered header version. No display means no SPI needed.</td><td class="m r">1</td><td class="m r">18</td></tr>
+      <tr><td>microSD 16 GB, A1 rated</td><td>A1 matters — cheap cards make boot glacial.</td><td class="m r">1</td><td class="m r">8</td></tr>
+
+      <tr class="grp"><td colspan="4">Sensing — the follower assembly</td></tr>
+      <tr><td><b>uxcell 25-pack mouse encoders</b></td><td>Use the <b>13 mm</b> height — shorter ones put the metal can into the paper. Declick each one before fitting: the detent is what decides whether this part works.</td><td class="m r">1 pk</td><td class="m r">10</td></tr>
+      <tr><td>3 mm shaft + 2× MR63ZZ bearings</td><td>Low friction is critical — drag tears paper.</td><td class="m r">1</td><td class="m r">6</td></tr>
+      <tr><td>Light torsion spring</td><td>~5–15 gf at the contact patch. A rubber band works for v1.</td><td class="m r">1</td><td class="m r">1</td></tr>
+      <tr><td>10 kΩ resistors, 10 nF caps</td><td>Debounce network on A and B. See the sizing note.</td><td class="m r">2+2</td><td class="m r">1</td></tr>
+
+      <tr class="grp"><td colspan="4">Audio</td></tr>
+      <tr><td><b>MAX98357A I2S amp</b></td><td>3 W mono straight off I2S. The Zero has no analogue out at all.</td><td class="m r">1</td><td class="m r">6</td></tr>
+      <tr><td>40 mm 4 Ω 3 W speaker</td><td>Give it a sealed back volume or it sounds like a phone in a bucket.</td><td class="m r">1</td><td class="m r">4</td></tr>
+
+      <tr class="grp"><td colspan="4">Power — this is the wireless part</td></tr>
+      <tr><td><b>5 V 2 A boost + LiPo charger</b><br><span style="color:var(--ink-3);font-size:13px">with load sharing</span></td><td><b>2 A, not 1 A</b> — see the current budget below. Load sharing lets it run while charging. Must expose an LBO (low-battery) pin.</td><td class="m r">1</td><td class="m r">20</td></tr>
+      <tr><td>LiPo 3.7 V 10,000 mAh pouch</td><td>Or 2× 18650 3500 mAh in parallel + holder. Must have a protection board.</td><td class="m r">1</td><td class="m r">20</td></tr>
+      <tr><td>USB-C breakout for charging</td><td>Unless your charger board already has USB-C.</td><td class="m r">1</td><td class="m r">3</td></tr>
+      <tr><td>1000 µF electrolytic, 10 V</td><td>Bulk cap across the amp's 5 V/GND. Rides out switching transients.</td><td class="m r">1</td><td class="m r">1</td></tr>
+      <tr><td>100 nF ceramic</td><td>Decoupling at the amp VIN pin.</td><td class="m r">2</td><td class="m r">1</td></tr>
+      <tr><td>SPDT slide switch</td><td>On the charger's EN pin — a real off switch.</td><td class="m r">1</td><td class="m r">1</td></tr>
+
+      <tr class="grp"><td colspan="4">Misc</td></tr>
+      <tr><td>Momentary tactile button</td><td>Short press = repeat, hold 2 s = new roll.</td><td class="m r">1</td><td class="m r">1</td></tr>
+      <tr><td>JST-PH connectors, wire, heat shrink</td><td>Use connectors — you will open this thing repeatedly.</td><td class="m r">—</td><td class="m r">7</td></tr>
+      <tr><td>PETG filament</td><td>Not PLA. Hot showers warp PLA and a warped arm ruins calibration.</td><td class="m r">—</td><td class="m r">5</td></tr>
+      <tr class="total"><td>Total</td><td></td><td></td><td class="m r">≈116</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <div class="callout warn">
+    <span class="tag">Spec the 2 A boost, not the 1 A</span>
+    <p>I costed the 1 A module first and it doesn't survive the arithmetic. The Pi peaks around 600 mA on a WiFi transmit burst; the MAX98357A driving 4 Ω at full tilt pulls about 950 mA. Worst case those coincide at <span class="tnum">1.55 A</span>. The 1000 µF bulk cap only rides out about 0.47 ms before sagging — enough for a switching transient, nowhere near enough for a loud sentence. Either fit a 2 A module, or keep <code>volume ≤ 0.8</code> and accept brownout risk. The 2 A module costs a few dollars more; take the module.</p>
+  </div>
+</main>
+
+<div class="perf"><span>Schematic</span></div>
+
+<figure class="wide">
+  <div class="board">
+  <svg viewBox="0 0 960 660" role="img" aria-label="Schematic: LiPo cell into a 5V 2A boost and charger module with load sharing, feeding the Raspberry Pi Zero 2 W 5V rail and a MAX98357A amplifier. The scroll wheel encoder connects to GPIO 5 and 6 through an RC debounce network, a button to GPIO 16, the amp shutdown pin to GPIO 23, and the charger low-battery output to GPIO 26.">
+    <defs>
+      <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--ink-2)" stroke-width="1.5"/></marker>
+    </defs>
+    <style>
+      .lbl{font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:var(--ink-2)}
+      .nm{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;fill:var(--ink)}
+      .sm{font-family:'IBM Plex Mono',monospace;font-size:9px;fill:var(--ink-3)}
+      .net{font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--accent);font-weight:500}
+      .w{stroke:var(--ink-2);stroke-width:1.5;fill:none}
+      .wp{stroke:var(--pos);stroke-width:2;fill:none}
+      .wg{stroke:var(--neg);stroke-width:2;fill:none}
+      .blk{fill:var(--surface);stroke:var(--rule-2);stroke-width:1.3}
+      .blkA{fill:var(--surface);stroke:var(--accent);stroke-width:1.6}
+    </style>
+
+    <!-- ============ POWER SECTION ============ -->
+    <text x="16" y="20" class="sm" letter-spacing="1.6">POWER</text>
+
+    <!-- battery -->
+    <rect x="16" y="32" width="112" height="62" rx="4" class="blk"/>
+    <text x="28" y="54" class="nm">LiPo 3.7 V</text>
+    <text x="28" y="70" class="lbl">10,000 mAh</text>
+    <text x="28" y="85" class="sm">w/ protection board</text>
+    <line x1="128" y1="52" x2="176" y2="52" class="wp"/>
+    <line x1="128" y1="78" x2="176" y2="78" class="wg"/>
+    <text x="136" y="47" class="sm">+</text>
+    <text x="136" y="92" class="sm">−</text>
+
+    <!-- charger / boost -->
+    <rect x="176" y="24" width="188" height="120" rx="4" class="blkA"/>
+    <text x="188" y="46" class="nm">5 V 2 A boost</text>
+    <text x="188" y="62" class="nm">+ LiPo charger</text>
+    <text x="188" y="78" class="sm">load sharing required</text>
+    <text x="188" y="100" class="lbl">BAT+ / BAT−</text>
+    <text x="188" y="116" class="lbl">USB-C  →  charge in</text>
+    <text x="188" y="132" class="lbl">EN · LBO · 5V · GND</text>
+
+    <!-- usb-c -->
+    <rect x="196" y="170" width="86" height="30" rx="4" class="blk"/>
+    <text x="208" y="189" class="lbl">USB-C in</text>
+    <line x1="239" y1="170" x2="239" y2="144" class="w"/>
+
+    <!-- switch -->
+    <line x1="300" y1="144" x2="300" y2="176" class="w"/>
+    <circle cx="300" cy="180" r="3.5" fill="none" stroke="var(--ink-2)" stroke-width="1.5"/>
+    <line x1="300" y1="184" x2="312" y2="200" class="w"/>
+    <circle cx="300" cy="206" r="3.5" fill="none" stroke="var(--ink-2)" stroke-width="1.5"/>
+    <line x1="300" y1="210" x2="300" y2="228" class="wg"/>
+    <text x="318" y="196" class="lbl">SPDT switch</text>
+    <text x="318" y="209" class="sm">EN → GND = off</text>
+
+    <!-- 5V rail -->
+    <line x1="364" y1="52" x2="910" y2="52" class="wp"/>
+    <text x="872" y="45" class="net">+5 V</text>
+    <!-- GND rail -->
+    <line x1="16" y1="620" x2="910" y2="620" class="wg"/>
+    <text x="876" y="613" class="net">GND</text>
+    <line x1="176" y1="144" x2="176" y2="620" class="wg"/>
+
+    <!-- LBO -->
+    <line x1="364" y1="128" x2="404" y2="128" class="w" marker-end="url(#a1)"/>
+    <text x="370" y="121" class="net">LBO</text>
+
+    <!-- ============ PI ============ -->
+    <rect x="404" y="86" width="230" height="330" rx="5" class="blkA"/>
+    <text x="420" y="110" class="nm">Raspberry Pi Zero 2 W</text>
+    <text x="420" y="126" class="sm">BCM numbering</text>
+    <line x1="420" y1="136" x2="618" y2="136" stroke="var(--rule)" stroke-width="1"/>
+
+    <!-- pi left pins -->
+    <g class="lbl">
+      <text x="416" y="158">GPIO26  ◂ battery low</text>
+      <text x="416" y="186">GPIO5   ◂ encoder A</text>
+      <text x="416" y="206">GPIO6   ◂ encoder B</text>
+      <text x="416" y="234">GPIO16  ◂ button</text>
+    </g>
+    <line x1="404" y1="154" x2="380" y2="154" class="w"/>
+    <line x1="380" y1="154" x2="380" y2="128" class="w"/>
+    <line x1="404" y1="182" x2="330" y2="182" class="w"/>
+    <line x1="404" y1="202" x2="330" y2="202" class="w"/>
+    <line x1="404" y1="230" x2="330" y2="230" class="w"/>
+
+    <!-- pi right pins -->
+    <g class="lbl" text-anchor="end">
+      <text x="622" y="268">I2S BCLK  GPIO18 ▸</text>
+      <text x="622" y="288">I2S LRCLK GPIO19 ▸</text>
+      <text x="622" y="308">I2S DIN   GPIO21 ▸</text>
+      <text x="622" y="336">amp SD    GPIO23 ▸</text>
+      <text x="622" y="372">5 V / GND</text>
+    </g>
+    <line x1="634" y1="264" x2="700" y2="264" class="w"/>
+    <line x1="634" y1="284" x2="700" y2="284" class="w"/>
+    <line x1="634" y1="304" x2="700" y2="304" class="w"/>
+    <line x1="634" y1="332" x2="700" y2="332" class="w"/>
+    <line x1="560" y1="86" x2="560" y2="52" class="wp"/>
+    <line x1="600" y1="416" x2="600" y2="620" class="wg"/>
+
+    <!-- ============ ENCODER ============ -->
+    <text x="16" y="180" class="sm" letter-spacing="1.6">SENSING</text>
+    <rect x="16" y="192" width="120" height="78" rx="4" class="blkA"/>
+    <text x="28" y="214" class="nm">Scroll wheel</text>
+    <text x="28" y="230" class="lbl">encoder</text>
+    <text x="28" y="248" class="sm">A · B · C(common)</text>
+    <text x="28" y="262" class="sm">detent spring removed</text>
+    <line x1="136" y1="212" x2="176" y2="212" class="w"/>
+    <line x1="136" y1="232" x2="176" y2="232" class="w"/>
+    <line x1="136" y1="256" x2="150" y2="256" class="wg"/>
+    <line x1="150" y1="256" x2="150" y2="620" class="wg"/>
+
+    <!-- debounce RC -->
+    <rect x="176" y="186" width="154" height="86" rx="4" fill="none"
+          stroke="var(--rule-2)" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="184" y="200" class="sm">RC DEBOUNCE</text>
+    <!-- channel A -->
+    <rect x="196" y="206" width="26" height="11" fill="none" stroke="var(--ink-2)" stroke-width="1.3"/>
+    <line x1="176" y1="212" x2="196" y2="212" class="w"/>
+    <line x1="222" y1="212" x2="330" y2="212" class="w"/>
+    <line x1="250" y1="212" x2="250" y2="196" class="w"/>
+    <text x="256" y="194" class="sm">10 kΩ ↑3V3</text>
+    <line x1="280" y1="212" x2="280" y2="238" class="w"/>
+    <line x1="272" y1="238" x2="288" y2="238" class="w"/>
+    <line x1="272" y1="243" x2="288" y2="243" class="w"/>
+    <line x1="280" y1="243" x2="280" y2="620" class="wg"/>
+    <text x="292" y="244" class="sm">10 nF</text>
+    <!-- channel B (mirrored, simplified) -->
+    <line x1="176" y1="232" x2="330" y2="232" class="w"/>
+    <text x="184" y="266" class="sm">B: identical network</text>
+    <line x1="330" y1="212" x2="330" y2="182" class="w"/>
+    <line x1="330" y1="232" x2="330" y2="202" class="w"/>
+
+    <!-- button -->
+    <rect x="16" y="300" width="120" height="56" rx="4" class="blk"/>
+    <text x="28" y="322" class="nm">Button</text>
+    <text x="28" y="338" class="sm">repeat / new roll</text>
+    <line x1="136" y1="318" x2="330" y2="318" class="w"/>
+    <line x1="330" y1="318" x2="330" y2="230" class="w"/>
+    <line x1="136" y1="342" x2="150" y2="342" class="wg"/>
+    <text x="150" y="336" class="sm">internal pull-up</text>
+
+    <!-- ============ AMP ============ -->
+    <text x="700" y="240" class="sm" letter-spacing="1.6">AUDIO</text>
+    <rect x="700" y="252" width="180" height="130" rx="4" class="blkA"/>
+    <text x="712" y="274" class="nm">MAX98357A</text>
+    <text x="712" y="292" class="lbl">BCLK · LRC · DIN</text>
+    <text x="712" y="310" class="lbl">SD_MODE</text>
+    <text x="712" y="330" class="lbl">VIN 5 V · GND</text>
+    <text x="712" y="350" class="sm">GAIN floating = 9 dB</text>
+    <text x="712" y="366" class="sm">SD high = on, left ch</text>
+    <line x1="790" y1="252" x2="790" y2="52" class="wp"/>
+    <line x1="740" y1="382" x2="740" y2="620" class="wg"/>
+
+    <!-- bulk cap -->
+    <line x1="846" y1="120" x2="846" y2="252" class="w"/>
+    <line x1="838" y1="150" x2="854" y2="150" class="w"/>
+    <path d="M838 158 q8 6 16 0" fill="none" stroke="var(--ink-2)" stroke-width="1.5"/>
+    <line x1="846" y1="52" x2="846" y2="150" class="wp"/>
+    <line x1="846" y1="162" x2="846" y2="620" class="wg"/>
+    <text x="860" y="150" class="sm">1000 µF</text>
+    <text x="860" y="163" class="sm">+ 100 nF</text>
+
+    <!-- speaker -->
+    <line x1="880" y1="300" x2="906" y2="300" class="w"/>
+    <line x1="880" y1="326" x2="906" y2="326" class="w"/>
+    <path d="M906 292 l0 42 l16 14 l0 -70 z" fill="var(--surface)" stroke="var(--ink-2)" stroke-width="1.4"/>
+    <text x="884" y="360" class="lbl">4 Ω 3 W</text>
+
+    <!-- notes -->
+    <text x="16" y="470" class="sm" letter-spacing="1.6">NOTES</text>
+    <g class="lbl">
+      <text x="16" y="492">1.  5 V from the boost goes to Pi header pins 2/4. This bypasses the Pi's input protection —</text>
+      <text x="16" y="508">     normal for a battery build, but do not also plug in the Pi's own USB power at the same time.</text>
+      <text x="16" y="528">2.  Single star ground at the charger module's GND. Do not daisy-chain the speaker return.</text>
+      <text x="16" y="548">3.  Keep speaker leads away from encoder A/B — class-D switching noise couples into them.</text>
+      <text x="16" y="568">4.  No I2C devices in this build, so GPIO 2/3 stay free. If you later fit an AS5600 (0x36),</text>
+      <text x="16" y="584">     note the MAX17048 fuel gauge is ALSO fixed at 0x36 — use an LC709203F (0x0B) instead.</text>
+    </g>
+  </svg>
+  </div>
+  <figcaption>Eight GPIO in total, no bus conflicts. The amp's SD_MODE line is doing double duty: it's the mute control and the idle power saving, worth ~14 mA and all of the idle hiss.</figcaption>
+</figure>
+
+<main class="wrap">
+  <h3>Pin assignments</h3>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Signal</th><th class="m">BCM</th><th class="m">Header pin</th><th>Goes to</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>I2S BCLK</td><td class="m pin">GPIO18</td><td class="m">12</td><td>MAX98357A BCLK</td><td>PCM_CLK</td></tr>
+      <tr><td>I2S LRCLK</td><td class="m pin">GPIO19</td><td class="m">35</td><td>MAX98357A LRC</td><td>PCM_FS</td></tr>
+      <tr><td>I2S data</td><td class="m pin">GPIO21</td><td class="m">40</td><td>MAX98357A DIN</td><td>PCM_DOUT</td></tr>
+      <tr><td>Amp shutdown</td><td class="m pin">GPIO23</td><td class="m">16</td><td>MAX98357A SD_MODE</td><td>high = on/left, low = sleep</td></tr>
+      <tr><td>Encoder A</td><td class="m pin">GPIO5</td><td class="m">29</td><td>scroll wheel A</td><td>via RC, internal pull-up</td></tr>
+      <tr><td>Encoder B</td><td class="m pin">GPIO6</td><td class="m">31</td><td>scroll wheel B</td><td>via RC, internal pull-up</td></tr>
+      <tr><td>Button</td><td class="m pin">GPIO16</td><td class="m">36</td><td>button → GND</td><td>internal pull-up</td></tr>
+      <tr><td>Battery low</td><td class="m pin">GPIO26</td><td class="m">37</td><td>charger LBO</td><td>open drain, low = trouble</td></tr>
+      <tr><td>5 V in</td><td class="m">—</td><td class="m">2, 4</td><td>boost 5 V out</td><td>bypasses input protection</td></tr>
+      <tr><td>Ground</td><td class="m">—</td><td class="m">6, 9, 14, 20</td><td>star ground</td><td>one point at the charger</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <div class="callout">
+    <span class="tag">Why 10 kΩ + 10 nF and not 10 kΩ + 100 nF</span>
+    <p>A hard yank moves paper at roughly 1 m/s, which at 2.75 mm/count is <span class="tnum">364 counts/s</span> — a 2.7 ms period, so 1.4 ms per half-cycle. A 10 kΩ/100 nF network has a 1 ms time constant and would smear that into mush. 10 kΩ + 10 nF gives 100 µs, roughly 14× faster than the fastest edge you'll ever see, while still killing contact bounce. If you're using an optical encoder you can skip the RC entirely.</p>
+  </div>
+</main>
+
+<div class="perf"><span>Layout</span></div>
+
+<figure class="wide">
+  <div class="board">
+  <svg viewBox="0 0 960 470" role="img" aria-label="Cross-section layout: the roll sits low, a sprung follower arm above it presses the scroll wheel onto the top of the roll, and a sealed upper compartment holds the Pi, amplifier, boost module and battery, with the speaker firing downward and a USB-C charging port underneath.">
+    <style>
+      .L{font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:var(--ink-2)}
+      .N{font-family:'Bricolage Grotesque',sans-serif;font-size:12.5px;font-weight:600;fill:var(--ink)}
+      .S{font-family:'IBM Plex Mono',monospace;font-size:9px;fill:var(--ink-3)}
+      .dim{stroke:var(--accent);stroke-width:1;fill:none}
+    </style>
+
+    <!-- enclosure outline -->
+    <path d="M40 34 L640 34 L640 250 L560 250 L560 420 L40 420 Z"
+          fill="var(--surface-2)" stroke="var(--rule-2)" stroke-width="1.6"/>
+    <!-- dry compartment divider -->
+    <line x1="40" y1="182" x2="640" y2="182" stroke="var(--accent)" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <text x="52" y="176" class="S" letter-spacing="1.3">SEALED DIVIDER — DRY SIDE ABOVE</text>
+
+    <!-- electronics bay -->
+    <rect x="56" y="46" width="104" height="46" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.4"/>
+    <text x="66" y="66" class="N">Pi Zero 2 W</text>
+    <text x="66" y="82" class="S">header facing in</text>
+
+    <rect x="172" y="46" width="92" height="46" rx="3" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.3"/>
+    <text x="182" y="66" class="N">MAX98357A</text>
+    <text x="182" y="82" class="S">+ bulk cap</text>
+
+    <rect x="276" y="46" width="104" height="46" rx="3" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.3"/>
+    <text x="286" y="66" class="N">boost +</text>
+    <text x="286" y="80" class="N">charger</text>
+
+    <rect x="392" y="46" width="228" height="62" rx="3" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.3"/>
+    <text x="404" y="68" class="N">LiPo 10,000 mAh</text>
+    <text x="404" y="84" class="S">heaviest part — mount it low and</text>
+    <text x="404" y="97" class="S">against the wall plate</text>
+
+    <!-- speaker firing down -->
+    <rect x="56" y="118" width="84" height="34" rx="3" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.3"/>
+    <text x="66" y="139" class="N">speaker</text>
+    <path d="M74 152 l0 14 M90 152 l0 14 M106 152 l0 14 M122 152 l0 14"
+          stroke="var(--ink-3)" stroke-width="1.4"/>
+    <text x="148" y="165" class="S">fires down through a slot, away from splash</text>
+
+    <!-- usb-c -->
+    <rect x="470" y="120" width="58" height="20" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.3"/>
+    <text x="478" y="134" class="S">USB-C</text>
+    <text x="536" y="134" class="S">charge port, underside</text>
+
+    <!-- roll -->
+    <circle cx="240" cy="320" r="78" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+    <circle cx="240" cy="320" r="27" fill="var(--paper)" stroke="var(--rule-2)" stroke-width="1.3"/>
+    <circle cx="240" cy="320" r="4" fill="var(--ink-3)"/>
+    <circle cx="240" cy="320" r="46" fill="none" stroke="var(--rule-2)" stroke-width="1" stroke-dasharray="3 4"/>
+    <text x="240" y="412" text-anchor="middle" class="S">roll: ⌀110 fresh → ⌀44 core</text>
+
+    <!-- follower arm -->
+    <circle cx="118" cy="212" r="5" fill="none" stroke="var(--ink-2)" stroke-width="2"/>
+    <text x="80" y="207" class="S">pivot</text>
+    <line x1="118" y1="212" x2="222" y2="228" stroke="var(--ink-2)" stroke-width="3" stroke-linecap="round"/>
+    <!-- wheel on roll surface -->
+    <circle cx="232" cy="231" r="11" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
+    <circle cx="232" cy="231" r="4" fill="var(--accent)"/>
+    <text x="252" y="222" class="N">scroll wheel ⌀21</text>
+    <text x="252" y="236" class="S">contacts top of roll</text>
+
+    <!-- travel arc -->
+    <path d="M232 231 A 96 96 0 0 0 264 296" class="dim" stroke-dasharray="3 3"/>
+    <line x1="300" y1="242" x2="300" y2="294" class="dim"/>
+    <path d="M296 246 l4 -6 l4 6" fill="none" stroke="var(--accent)" stroke-width="1"/>
+    <path d="M296 290 l4 6 l4 -6" fill="none" stroke="var(--accent)" stroke-width="1"/>
+    <text x="312" y="264" class="L" fill="var(--accent)">33 mm of</text>
+    <text x="312" y="278" class="L" fill="var(--accent)">sprung travel</text>
+
+    <!-- spring -->
+    <path d="M118 212 q 26 -16 40 0 q 14 16 -6 22" fill="none" stroke="var(--warn)" stroke-width="1.8"/>
+    <text x="166" y="196" class="S" fill="var(--warn)">light torsion spring</text>
+
+    <!-- paper path -->
+    <path d="M318 320 Q 400 340 470 380 L 470 450" fill="none" stroke="var(--ink-2)"
+          stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="552" y1="392" x2="592" y2="392" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round"/>
+    <text x="600" y="396" class="S">tear bar</text>
+    <text x="486" y="446" class="L">paper out</text>
+
+    <!-- button -->
+    <circle cx="600" cy="150" r="9" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.4"/>
+    <text x="618" y="154" class="S">button (front face)</text>
+
+    <!-- wall -->
+    <line x1="36" y1="24" x2="36" y2="430" stroke="var(--ink-3)" stroke-width="2.5"/>
+    <g stroke="var(--ink-3)" stroke-width="1">
+      <line x1="24" y1="40" x2="36" y2="28"/><line x1="24" y1="80" x2="36" y2="68"/>
+      <line x1="24" y1="120" x2="36" y2="108"/><line x1="24" y1="160" x2="36" y2="148"/>
+      <line x1="24" y1="200" x2="36" y2="188"/><line x1="24" y1="240" x2="36" y2="228"/>
+      <line x1="24" y1="280" x2="36" y2="268"/><line x1="24" y1="320" x2="36" y2="308"/>
+      <line x1="24" y1="360" x2="36" y2="348"/><line x1="24" y1="400" x2="36" y2="388"/>
+    </g>
+    <text x="700" y="40" class="S" letter-spacing="1.4">SECTION THROUGH THE HOLDER</text>
+    <g class="L">
+      <text x="700" y="70">Wet and dry are separated by one</text>
+      <text x="700" y="86">sealed shelf. Everything electrical</text>
+      <text x="700" y="102">lives above it; the only things below</text>
+      <text x="700" y="118">are the arm, the wheel and two wires.</text>
+      <text x="700" y="146">The arm's pivot sits high and behind</text>
+      <text x="700" y="162">the roll so the wheel stays roughly</text>
+      <text x="700" y="178">tangential across the whole 33 mm.</text>
+      <text x="700" y="206">Run the encoder pair as a twisted</text>
+      <text x="700" y="222">pair through the shelf grommet, well</text>
+      <text x="700" y="238">away from the speaker leads.</text>
+    </g>
+  </svg>
+  </div>
+  <figcaption>Battery at the back and low — it's by far the heaviest component and a wall-mounted holder with mass up front will sag on its fixings over time.</figcaption>
+</figure>
+
+<div class="perf"><span>Runtime</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">03</span>
+    <h2>How long it actually lasts</h2>
+    <p>You asked for wireless, so here are the honest numbers rather than the ones I'd like to give you. Measured assumptions: headless Pi with WiFi associated, our poll loop, six uses a day at 25 seconds of speech each.</p>
+  </section>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Draw</th><th class="r">Current @5 V</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Pi Zero 2 W idle, WiFi on</td><td class="m r">115 mA</td><td>the floor — you cannot get under this</td></tr>
+      <tr><td>Poll loop at 200 Hz</td><td class="m r">28 mA</td><td>drops to ~8 mA at the 40 Hz idle rate</td></tr>
+      <tr><td>Amp idle, un-muted</td><td class="m r">14 mA</td><td>reclaimed by the SD_MODE pin</td></tr>
+      <tr><td>WiFi power-save</td><td class="m r">−25 mA</td><td>enabled by the setup script</td></tr>
+      <tr class="total"><td>Optimised idle</td><td class="m r">101 mA</td><td>≈0.5 W</td></tr>
+      <tr><td>Talking</td><td class="m r">341 mA</td><td>2.5 min/day, so barely moves the average</td></tr>
+    </tbody>
+  </table>
+  <table style="margin-top:26px">
+    <thead><tr><th>Battery</th><th class="r">Capacity</th><th class="r">Runtime</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>2× 18650, parallel</td><td class="m r">7,000 mAh</td><td class="m r">1.9 days</td><td>too often</td></tr>
+      <tr><td><b>10,000 mAh LiPo</b></td><td class="m r">10,000 mAh</td><td class="m r">2.7 days</td><td>twice a week</td></tr>
+      <tr><td>20,000 mAh pack</td><td class="m r">20,000 mAh</td><td class="m r">5.4 days</td><td>weekly — the sweet spot</td></tr>
+      <tr><td>30,000 mAh pack</td><td class="m r">30,000 mAh</td><td class="m r">8.1 days</td><td>big and heavy on a wall</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <div class="callout warn">
+    <span class="tag">The thing you should know before buying the battery</span>
+    <p>A Pi Zero 2 W has no usable sleep state, so that 115 mA floor runs 24 hours a day whether anyone uses the holder or not. Every software trick combined buys about 30%, not 10×. That's why the runtime ceiling is days, not months.</p>
+    <p>An ESP32-S3 doing the same job — deep sleep at ~18 µA, woken by the encoder edge, WiFi up for four seconds every half hour — comes to about <span class="tnum">12.6 mAh/day</span>. A small 2,000 mAh cell would then last <span class="tnum">five months</span>, in a package a fraction of the size.</p>
+    <p>My suggestion: build it on the Pi with a 20,000 mAh pack and live with charging it on Sundays. The interaction is what you're still designing, and Python on a real Linux box is the right place to be iterating. Port to the ESP32 once you've stopped changing your mind about how it should feel — <code>geometry.py</code> and <code>motion.py</code> translate to C++ almost line for line, and they're the only parts with any subtlety in them.</p>
+  </div>
+</main>
+
+<div class="perf"><span>Bring-up</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">04</span>
+    <h2>Assembly order</h2>
+    <p>Build it in this order. Each step is testable on its own, which matters because debugging all of it at once is miserable.</p>
+    <ol class="steps">
+      <li><b>Pi on USB power, no peripherals.</b> Flash Raspberry Pi OS Lite 64-bit, get it on WiFi, run <code>sudo bash hardware/setup-pi.sh</code>, reboot.</li>
+      <li><b>Audio only.</b> Wire the amp and speaker. <code>aplay -l</code> must show a hifiberry card; <code>speaker-test -c1 -t sine -f 440 -l1</code> must make a noise. Nothing else works until this does.</li>
+      <li><b>Encoder on the bench, wheel in your fingers.</b> Wire A/B/common with the RC network. Spin it by hand and watch the count move both ways:
+        <pre style="margin:10px 0 0"><span class="c"># must go up AND down</span>
+python3 -c "from gpiozero import RotaryEncoder; import time; \
+e=RotaryEncoder(5,6,max_steps=0); \
+[print(e.steps) or time.sleep(.2) for _ in range(50)]"</pre>
+      </li>
+      <li><b>Power chain, still on the bench.</b> Battery into the charger, switch, 5 V out measured with a meter <em>before</em> it touches the Pi. Confirm it holds ≥4.9 V while the amp plays loudly. This is where a 1 A module fails.</li>
+      <li><b>Mechanical assembly.</b> Arm, spring, wheel on the roll. Check the wheel still contacts a nearly-empty roll — wind one down or shim a 44 mm core to test it.</li>
+      <li><b>Calibrate.</b> Three runs of <code>tools/calibrate.py</code>, paste <code>mm_per_count</code>, confirm the spread is under 3%.</li>
+      <li><b>Set <code>sensor.kind: quadrature</code></b> in the config and start the service. If pulling paper makes the count go <em>down</em>, set <code>invert: true</code> rather than swapping wires.</li>
+    </ol>
+  </section>
+
+  <h3>What changed in the code</h3>
+  <ul class="plain">
+    <li><b><code>display.py</code> is gone.</b> Along with SPI, Pillow, the Waveshare vendoring step and the draw thread. The low-paper readout it used to show is now spoken instead, once, below 12 sheets.</li>
+    <li><b><code>power.py</code> is new.</b> Amp shutdown control and the low-battery watchdog, which warns out loud then halts cleanly after five minutes — a Pi that browns out mid-write corrupts its SD card, and nobody is watching this one.</li>
+    <li><b>The loop idles down.</b> 200 Hz while paper moves, 40 Hz after eight seconds of quiet.</li>
+    <li><b><code>noise_floor_mm</code> is 6.0, not 3.0.</b> Two counts at scroll-wheel resolution instead of one. There's a test asserting this stays true if you change the wheel.</li>
+    <li><b>21 tests now, up from 16.</b> The new ones cover the surface-wheel geometry at five roll diameters and the amp's wake/release logic.</li>
+  </ul>
+</main>
+
+<footer class="wrap">
+  Broadsheet rev B · 21 tests, no hardware required · geometry.py and motion.py are the files worth reading
+</footer>
+</body>
+</html>

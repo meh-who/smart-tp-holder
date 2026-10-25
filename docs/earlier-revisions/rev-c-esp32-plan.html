@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Broadsheet on ESP32-S3</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500&display=swap">
+<style>
+:root{
+  --paper:#FAFAF7; --surface:#FFFFFF; --surface-2:#F1F3F2;
+  --ink:#131A1B; --ink-2:#53656A; --ink-3:#7E8E91;
+  --rule:#DCE3E2; --rule-2:#C3CECC;
+  --accent:#0D7268; --accent-soft:#E2F0ED;
+  --warn:#B8471E; --warn-soft:#FAEBE4;
+  --pos:#B8471E; --neg:#2D3E41;
+  --shadow:0 1px 2px rgba(19,26,27,.05), 0 8px 24px -12px rgba(19,26,27,.14);
+  --f-display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --col:69ch; --gutter:24px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0D1213; --surface:#151C1D; --surface-2:#1B2425;
+  --ink:#E4EAE8; --ink-2:#9BADAE; --ink-3:#74878A;
+  --rule:#263132; --rule-2:#33403F;
+  --accent:#4ECDBF; --accent-soft:#13312F;
+  --warn:#E98A5C; --warn-soft:#331C12;
+  --pos:#E98A5C; --neg:#93A5A6;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --paper:#0D1213; --surface:#151C1D; --surface-2:#1B2425;
+  --ink:#E4EAE8; --ink-2:#9BADAE; --ink-3:#74878A;
+  --rule:#263132; --rule-2:#33403F;
+  --accent:#4ECDBF; --accent-soft:#13312F;
+  --warn:#E98A5C; --warn-soft:#331C12;
+  --pos:#E98A5C; --neg:#93A5A6;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink); font-family:var(--f-body);
+  font-size:17px; line-height:1.62; margin:0; padding-block:0;
+  padding-inline:var(--gutter); -webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--col); margin:0 auto}
+.wide{max-width:980px; margin:0 auto}
+.perf{display:flex; align-items:center; gap:10px; margin-block:56px 40px; color:var(--ink-3)}
+.perf::before,.perf::after{content:""; flex:1; height:1px;
+  background-image:radial-gradient(circle, var(--rule-2) 1.1px, transparent 1.2px);
+  background-size:7px 7px; background-repeat:repeat-x; background-position:center}
+.perf span{font-family:var(--f-mono); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; white-space:nowrap}
+h1,h2,h3{font-family:var(--f-display); text-wrap:balance; margin:0}
+h1{font-size:clamp(34px,6.4vw,54px); line-height:1.03; font-weight:800; letter-spacing:-.025em}
+h2{font-size:clamp(24px,4vw,31px); line-height:1.14; font-weight:700; letter-spacing:-.018em; margin-bottom:6px}
+h3{font-size:18.5px; font-weight:600; margin:30px 0 6px}
+p{margin:0 0 17px}
+.lede{font-size:20px; line-height:1.58; color:var(--ink-2)}
+.num{font-family:var(--f-mono); font-size:12px; color:var(--ink-3);
+  letter-spacing:.1em; display:block; margin-bottom:8px}
+.kicker{font-family:var(--f-mono); font-size:11px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 20px;
+  display:flex; gap:14px; flex-wrap:wrap}
+.kicker b{color:var(--accent); font-weight:500}
+code{font-family:var(--f-mono); font-size:.86em; background:var(--surface-2);
+  padding:1.5px 5px; border-radius:3px; border:1px solid var(--rule)}
+.tnum{font-variant-numeric:tabular-nums}
+header.top{padding-block:60px 8px; max-width:var(--col); margin:0 auto}
+.specs{display:flex; flex-wrap:wrap; margin-top:32px;
+  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.specs div{flex:1 1 124px; padding:14px 16px 15px; border-right:1px solid var(--rule)}
+.specs div:last-child{border-right:0}
+.specs dt{font-family:var(--f-mono); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 4px}
+.specs dd{margin:0; font-family:var(--f-display); font-size:18px; font-weight:600;
+  font-variant-numeric:tabular-nums}
+.callout{border-left:2px solid var(--accent); background:var(--accent-soft);
+  padding:16px 20px; margin:24px 0; border-radius:0 4px 4px 0}
+.callout.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.callout p:last-child{margin-bottom:0}
+.callout .tag{font-family:var(--f-mono); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--accent); display:block; margin-bottom:5px}
+.callout.warn .tag{color:var(--warn)}
+.scroll{overflow-x:auto; margin:26px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:500px}
+th,td{text-align:left; padding:9px 14px 9px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+th{font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-3); border-bottom:1px solid var(--rule-2);
+  padding-bottom:8px; white-space:nowrap}
+td.m,th.m{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+td.r,th.r{text-align:right; padding-right:0}
+tr.total td{border-bottom:0; border-top:1px solid var(--rule-2); font-weight:600; padding-top:11px}
+tr.grp td{background:var(--surface-2); font-family:var(--f-mono); font-size:10px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); padding:7px 14px 7px 8px}
+.pin{color:var(--accent); font-weight:500}
+.good{color:var(--accent); font-weight:500}
+.bad{color:var(--warn); font-weight:500}
+pre{background:var(--surface); border:1px solid var(--rule); border-radius:5px;
+  padding:15px 17px; overflow-x:auto; margin:22px 0; font-family:var(--f-mono);
+  font-size:12.5px; line-height:1.66}
+pre .c{color:var(--ink-3)} pre .k{color:var(--accent)} pre .g{color:var(--accent)}
+figure{margin:30px 0}
+figcaption{font-family:var(--f-mono); font-size:11.5px; line-height:1.55;
+  color:var(--ink-3); margin-top:11px; max-width:66ch}
+svg{max-width:100%; height:auto; display:block}
+.board{background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+  padding:18px; box-shadow:var(--shadow)}
+ul.plain{list-style:none; padding:0; margin:18px 0}
+ul.plain li{padding:11px 0 11px 26px; border-bottom:1px solid var(--rule); position:relative}
+ul.plain li:last-child{border-bottom:0}
+ul.plain li::before{content:""; position:absolute; left:4px; top:20px; width:6px;
+  height:6px; border-radius:50%; background:var(--accent)}
+ul.plain b{font-family:var(--f-display); font-weight:600}
+.chart{background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+  padding:20px 20px 14px; box-shadow:var(--shadow)}
+.chart-title{font-family:var(--f-display); font-size:16px; font-weight:600; margin:0 0 2px}
+.chart-sub{font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  margin:0 0 16px; letter-spacing:.02em}
+#tip{position:absolute; pointer-events:none; opacity:0; transition:opacity .12s;
+  background:var(--ink); color:var(--paper); font-family:var(--f-mono); font-size:11px;
+  padding:6px 9px; border-radius:4px; white-space:nowrap;
+  transform:translate(-50%,-130%); z-index:5}
+footer{padding-block:36px 70px; color:var(--ink-3); font-family:var(--f-mono);
+  font-size:11.5px; letter-spacing:.04em}
+@media (max-width:520px){body{font-size:16px} .specs div{flex-basis:50%; border-bottom:1px solid var(--rule)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <p class="kicker"><b>Revision C</b><span>ESP32-S3</span><span>≈$70</span><span>3 months a charge</span></p>
+  <h1>The same product, on a microcontroller</h1>
+  <p class="lede">213× less energy per day than the Pi, and it feels faster rather than slower. Two decisions make that true, and neither is the one you'd guess: the sleep mode is the shallow one, and most of the software leaves the device entirely.</p>
+  <dl class="specs">
+    <div><dt>Per day</dt><dd>17.5 mAh</dd></div>
+    <div><dt>On 2000 mAh</dt><dd>97 days</dd></div>
+    <div><dt>Wake latency</dt><dd>15 ms</dd></div>
+    <div><dt>Port verified</dt><dd>43/43</dd></div>
+  </dl>
+</header>
+
+<div class="perf"><span>The headline number</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">01</span>
+    <h2>Why it's worth doing at all</h2>
+    <p>Same job, same six-uses-a-day duty cycle, same speech:</p>
+  </section>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Platform</th><th class="r">Energy/day</th><th class="r">2000 mAh</th><th class="r">10,000 mAh</th><th class="r">20,000 mAh</th></tr></thead>
+    <tbody>
+      <tr><td>Raspberry Pi Zero 2 W</td><td class="m r">3,722 mAh</td><td class="m r">0.5 days</td><td class="m r">2.3 days</td><td class="m r">4.6 days</td></tr>
+      <tr><td><b>ESP32-S3</b></td><td class="m r good">17.5 mAh</td><td class="m r good">97 days</td><td class="m r">486 days</td><td class="m r">971 days</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <p>The 20,000 mAh column is a joke you should ignore — the point is that 2000 mAh, a cell the size of a credit card and half a centimetre thick, gives you a quarter of a year. The Pi needs a pack forty times heavier to manage five days. That's not a tuning difference, it's a different class of object: one you hang on a wall and forget, versus one with a charging habit attached.</p>
+</main>
+
+<div class="perf"><span>Decision one</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">02</span>
+    <h2>Light sleep, not deep sleep</h2>
+    <p>I told you last time this would run on deep sleep at 18 µA. Having worked through the wake path, that's wrong, and it's worth showing why because the mistake is seductive.</p>
+    <p>Deep sleep powers down the CPU and most of RAM. Waking means the ROM bootloader runs, the app is re-loaded from flash, LittleFS remounts, I2S re-initialises — before a single sample reaches the amp:</p>
+  </section>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Deep sleep wake path</th><th class="r">ms</th><th class="r">cumulative</th></tr></thead>
+    <tbody>
+      <tr><td>RTC wake + ROM bootloader</td><td class="m r">140</td><td class="m r">140</td></tr>
+      <tr><td>2nd-stage bootloader + app load from flash</td><td class="m r">110</td><td class="m r">250</td></tr>
+      <tr><td>LittleFS mount</td><td class="m r">90</td><td class="m r">340</td></tr>
+      <tr><td>I2S + PCNT init</td><td class="m r">12</td><td class="m r">352</td></tr>
+      <tr><td>Open file, decode first MP3 frame</td><td class="m r">14</td><td class="m r">366</td></tr>
+      <tr><td>MAX98357A un-mute settling</td><td class="m r">30</td><td class="m r">396</td></tr>
+      <tr class="total"><td>Total</td><td></td><td class="m r bad">396 ms</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <p>That's <strong>twice</strong> the 200 ms budget the entire product is built around. Deep sleep would buy world-class battery life and hand back a device that feels broken on every single pull — trading away the only thing that makes the interaction work.</p>
+  <p>Light sleep keeps RAM powered. The filesystem stays mounted, I2S stays configured, execution resumes at the next instruction:</p>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Light sleep wake path</th><th class="r">ms</th><th class="r">cumulative</th></tr></thead>
+    <tbody>
+      <tr><td>GPIO edge wake</td><td class="m r">1</td><td class="m r">1</td></tr>
+      <tr><td>RAM retained — no remount, no re-init</td><td class="m r">0</td><td class="m r">1</td></tr>
+      <tr><td>Open file, decode first MP3 frame</td><td class="m r">14</td><td class="m r">15</td></tr>
+      <tr><td>Amp already woken at PULL_STARTED, 33 mm earlier</td><td class="m r">0</td><td class="m r">15</td></tr>
+      <tr class="total"><td>Total</td><td></td><td class="m r good">15 ms</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <p>250 µA instead of 18 µA — about 6 mAh a day, a third of the total budget. Worth every microamp. Deep sleep still appears in the firmware, but only after three hours of no use, where 400 ms on the first pull of the morning is genuinely unnoticeable.</p>
+
+  <div class="callout">
+    <span class="tag">The knock-on effect</span>
+    <p>A 250 µA sleep budget has a consequence the Pi build never had to think about: <strong>you cannot have a boost converter.</strong> A typical 5 V boost module idles at 10–20 mA, which is forty to eighty times the entire sleep budget. It would dominate everything.</p>
+    <p>So the ESP32 build has no 5 V rail at all. The board runs from the cell through its own LDO, and the amp runs straight off the cell too — a bridge-tied MAX98357A at 3.7 V still delivers <span class="tnum">1.7 W</span> into 4 Ω, and speech in a small tiled room needs well under one. One fewer module, one fewer failure mode, and the sleep budget survives.</p>
+  </div>
+
+  <div class="perf"><span>Decision two</span></div>
+
+  <section>
+    <span class="num">03</span>
+    <h2>Most of the software doesn't move</h2>
+    <p>The instinct on a platform port is to rewrite everything in C++. Don't. RSS parsing, fuzzy dedupe, the gentle-mode filter and a TLS call to a TTS vendor are all memory-hungry, all change often, and a microcontroller in a bathroom is the worst place on earth to maintain any of them.</p>
+    <p>So they don't move. <code>newsroom.py</code> and <code>tts.py</code> run unchanged on a server — a Pi already in the house, a NAS, a cheap VPS, or cron pushing to an S3 bucket. They write a static folder. The ESP32 fetches a manifest once an hour and plays files.</p>
+  </section>
+</main>
+
+<figure class="wide">
+  <div class="board">
+  <svg viewBox="0 0 960 330" role="img" aria-label="Architecture: on the server, newsroom.py and tts.py build a bulletin.json manifest and a folder of MP3s. The ESP32 fetches it hourly over HTTPS, and on the device the encoder feeds the gesture engine which plays MP3s from LittleFS through I2S.">
+    <style>
+      .L{font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:var(--ink-2)}
+      .N{font-family:'Bricolage Grotesque',sans-serif;font-size:12.5px;font-weight:600;fill:var(--ink)}
+      .S{font-family:'IBM Plex Mono',monospace;font-size:9px;fill:var(--ink-3)}
+      .blk{fill:var(--surface);stroke:var(--rule-2);stroke-width:1.3}
+      .blkA{fill:var(--surface);stroke:var(--accent);stroke-width:1.6}
+      .w{stroke:var(--ink-2);stroke-width:1.4;fill:none}
+    </style>
+    <defs>
+      <marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--ink-2)" stroke-width="1.5"/></marker>
+      <marker id="m2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,1 L9,5 L0,9" fill="none" stroke="var(--accent)" stroke-width="1.5"/></marker>
+    </defs>
+
+    <!-- server half -->
+    <rect x="12" y="24" width="392" height="150" rx="6" fill="var(--surface-2)"
+          stroke="var(--rule)" stroke-width="1.2" stroke-dasharray="4 4"/>
+    <text x="26" y="44" class="S" letter-spacing="1.5">SERVER — PYTHON, UNCHANGED FROM THE PI BUILD</text>
+
+    <rect x="26" y="56" width="112" height="46" rx="4" class="blk"/>
+    <text x="38" y="76" class="N">newsroom.py</text>
+    <text x="38" y="92" class="S">RSS · dedupe · filter</text>
+    <line x1="138" y1="79" x2="166" y2="79" class="w" marker-end="url(#m1)"/>
+
+    <rect x="172" y="56" width="96" height="46" rx="4" class="blk"/>
+    <text x="184" y="76" class="N">tts.py</text>
+    <text x="184" y="92" class="S">cloud TTS</text>
+    <line x1="268" y1="79" x2="296" y2="79" class="w" marker-end="url(#m1)"/>
+
+    <rect x="302" y="56" width="90" height="46" rx="4" class="blkA"/>
+    <text x="314" y="76" class="N">MP3 64k</text>
+    <text x="314" y="92" class="S">~34 KB each</text>
+
+    <rect x="26" y="116" width="366" height="42" rx="4" class="blk"/>
+    <text x="38" y="134" class="N">bulletin.json</text>
+    <text x="150" y="134" class="L">20 headlines · file + duration · 543 KB total</text>
+    <text x="38" y="150" class="S">static folder — host it anywhere, or serve it with --serve</text>
+
+    <!-- link -->
+    <path d="M404 137 L 470 137 L 470 96 L 528 96" class="w" stroke="var(--accent)"
+          stroke-dasharray="4 4" marker-end="url(#m2)"/>
+    <text x="414" y="128" class="S" fill="var(--accent)">HTTPS, hourly</text>
+    <text x="414" y="116" class="S" fill="var(--accent)">~5 s, incremental</text>
+
+    <!-- device half -->
+    <rect x="528" y="24" width="420" height="290" rx="6" fill="var(--accent-soft)"
+          stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="4 4"/>
+    <text x="542" y="44" class="S" letter-spacing="1.5">DEVICE — ESP32-S3</text>
+
+    <rect x="542" y="74" width="120" height="44" rx="4" class="blk"/>
+    <text x="554" y="92" class="N">sync.cpp</text>
+    <text x="554" y="108" class="S">the only WiFi code</text>
+    <line x1="602" y1="118" x2="602" y2="142" class="w" marker-end="url(#m1)"/>
+
+    <rect x="542" y="148" width="120" height="44" rx="4" class="blkA"/>
+    <text x="554" y="166" class="N">LittleFS</text>
+    <text x="554" y="182" class="S">6 MB partition</text>
+
+    <rect x="700" y="74" width="230" height="44" rx="4" class="blk"/>
+    <text x="712" y="92" class="N">encoder.cpp — PCNT</text>
+    <text x="712" y="108" class="S">hardware quadrature, x4</text>
+    <line x1="815" y1="118" x2="815" y2="140" class="w" marker-end="url(#m1)"/>
+
+    <rect x="700" y="146" width="230" height="48" rx="4" class="blkA"/>
+    <text x="712" y="165" class="N">bs_motion.cpp + bs_geometry.h</text>
+    <text x="712" y="182" class="S">ported from Python — diffed, 43/43 events</text>
+    <line x1="815" y1="194" x2="815" y2="216" class="w" marker-end="url(#m1)"/>
+
+    <rect x="700" y="222" width="230" height="44" rx="4" class="blk"/>
+    <text x="712" y="240" class="N">player.cpp → I2S → MAX98357A</text>
+    <text x="712" y="256" class="S">queue + backlog cap</text>
+    <line x1="662" y1="170" x2="698" y2="240" class="w" marker-end="url(#m1)"/>
+
+    <rect x="542" y="222" width="120" height="44" rx="4" class="blk"/>
+    <text x="554" y="240" class="N">light sleep</text>
+    <text x="554" y="256" class="S">250 µA · 1 ms wake</text>
+
+    <text x="542" y="292" class="L">Nothing on the pull path touches WiFi, allocates, or reconfigures I2S.</text>
+    <text x="542" y="306" class="S">The expensive work happened an hour ago.</text>
+  </svg>
+  </div>
+  <figcaption>The split isn't about firmware effort — it's that the interaction stays tunable by editing Python. Change how it feels, and the device picks it up on its next hourly sync instead of needing a reflash.</figcaption>
+</figure>
+
+<main class="wrap">
+  <p>Measured, not estimated — I built a real bulletin with the existing pipeline:</p>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Flash and sync budget</th><th class="r">measured</th></tr></thead>
+    <tbody>
+      <tr><td>One headline, 64 kbps mono MP3, 4.3 s</td><td class="m r">34 KB</td></tr>
+      <tr><td>20 headlines + 4 system clips</td><td class="m r">543 KB</td></tr>
+      <tr><td>Fits a 6 MB LittleFS partition</td><td class="m r good">11× over</td></tr>
+      <tr><td>Full cold download at ~400 kbit/s</td><td class="m r">4.9 s</td></tr>
+      <tr><td>Typical hourly sync (incremental)</td><td class="m r">~5 s</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <p>543 KB is small enough that there is no SD card in this design. One less connector to corrode in a humid room, and one less mount step in the wake path.</p>
+
+  <div class="perf"><span>The port</span></div>
+
+  <section>
+    <span class="num">04</span>
+    <h2>Proving the gesture engine survived translation</h2>
+    <p><code>motion.py</code> is where all the subtlety lives, and a hand-translation of it into C++ is exactly the kind of change that looks correct and isn't. The failure modes are invisible on a read-through: the falsy-zero guard that skips the first speed sample, the reverse-credit clamp, whether <code>last_motion_at</code> survives a <code>PULL_ENDED</code>.</p>
+    <p>So <code>bs_motion.cpp</code> has no Arduino, ESP-IDF or FreeRTOS dependency at all. It compiles on a laptop, and the same pull traces run through both implementations and get diffed field by field:</p>
+    <pre><span class="c">$ cd esp32/test
+$ g++ -std=c++17 -Wall -Wextra -I../include native_trace.cpp ../src/bs_motion.cpp -o trace
+$ python3 ../tools/diff_python_cpp.py</span>
+
+scenario      events  result
+----------------------------------------------------
+normal3            5  <span class="g">identical</span>
+hesitant           5  <span class="g">identical</span>
+twopulls           6  <span class="g">identical</span>
+rewind             5  <span class="g">identical</span>
+bump               0  <span class="g">identical</span>
+runaway            6  <span class="g">identical</span>
+single             3  <span class="g">identical</span>
+shorttug           3  <span class="g">identical</span>
+creep              4  <span class="g">identical</span>
+slowdrift          6  <span class="g">identical</span>
+----------------------------------------------------
+10 scenarios, 43 events, <span class="g">0 mismatch(es)</span></pre>
+    <p>This runs as part of <code>pytest</code> too (22 tests now), so the two can't quietly drift apart later. If you tune <code>first_trigger_mm</code> in the Python and forget the C++, the suite tells you.</p>
+    <p><code>geometry.py</code> barely needed porting. Because the wheel rides the roll's surface, the whole file is one multiply — the shrinking-radius model that the spindle version needs simply doesn't exist here.</p>
+  </section>
+</main>
+
+<div class="perf"><span>Parts</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">05</span>
+    <h2>Bill of materials</h2>
+    <p>Cheaper and simpler than the Pi build: no boost converter, no SD card, no 20,000 mAh brick.</p>
+  </section>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Part</th><th>Spec / why</th><th class="r">≈USD</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="3">Compute + power</td></tr>
+      <tr><td><b>ESP32-S3 board with LiPo charging</b></td><td>Must have a JST-PH battery connector and onboard charging — e.g. Adafruit ESP32-S3 Feather, Unexpected Maker TinyS3, Seeed XIAO ESP32S3. 8 MB flash minimum; 16 MB gives you OTA plus a roomy filesystem.</td><td class="m r">15</td></tr>
+      <tr><td>LiPo 3.7 V 2000 mAh</td><td>~97 days. With protection board. No boost, no charger module — the dev board does both.</td><td class="m r">9</td></tr>
+      <tr><td>2× 100 kΩ resistors</td><td>Battery sense divider into ADC1.</td><td class="m r">1</td></tr>
+      <tr class="grp"><td colspan="3">Audio</td></tr>
+      <tr><td>MAX98357A I2S amp</td><td>Same part as the Pi build. Runs straight off the cell at 1.7 W into 4 Ω.</td><td class="m r">6</td></tr>
+      <tr><td>40 mm 4 Ω 3 W speaker</td><td>Sealed back volume, as before.</td><td class="m r">4</td></tr>
+      <tr><td>470 µF + 100 nF</td><td>Bulk and decoupling at the amp.</td><td class="m r">1</td></tr>
+      <tr class="grp"><td colspan="3">Sensing — unchanged from Revision B</td></tr>
+      <tr><td>uxcell 25-pack mouse encoders</td><td>13 mm height. Declicked before fitting.</td><td class="m r">10</td></tr>
+      <tr><td>Shaft, 2× MR63ZZ bearings, torsion spring</td><td>The 33 mm follower arm.</td><td class="m r">7</td></tr>
+      <tr><td>Printed hub + O-rings</td><td>~17 mm ID × 2 mm section; the tyre.</td><td class="m r">3</td></tr>
+      <tr><td>2× 10 kΩ, 2× 10 nF</td><td>Debounce on A and B. The PCNT glitch filter is belt to this braces.</td><td class="m r">1</td></tr>
+      <tr class="grp"><td colspan="3">Misc</td></tr>
+      <tr><td>Momentary button, wire, JST connectors</td><td>Repeat / new roll.</td><td class="m r">6</td></tr>
+      <tr><td>PETG filament</td><td>Not PLA.</td><td class="m r">5</td></tr>
+      <tr class="total"><td>Total</td><td></td><td class="m r">≈70</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<main class="wrap">
+  <h3>Pin assignments</h3>
+  <p>GPIO 0–21 on the S3 are RTC-capable, which is why the encoder and button sit down there — only those can wake the chip from deep sleep.</p>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Signal</th><th class="m">GPIO</th><th>Goes to</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>Encoder A</td><td class="m pin">4</td><td>scroll wheel A</td><td>RTC-capable; wakes from both sleep modes</td></tr>
+      <tr><td>Encoder B</td><td class="m pin">5</td><td>scroll wheel B</td><td>RTC-capable</td></tr>
+      <tr><td>Button</td><td class="m pin">6</td><td>button → GND</td><td>internal pull-up</td></tr>
+      <tr><td>I2S BCLK</td><td class="m pin">15</td><td>MAX98357A BCLK</td><td>any GPIO — the S3 uses a matrix</td></tr>
+      <tr><td>I2S LRCLK</td><td class="m pin">16</td><td>MAX98357A LRC</td><td></td></tr>
+      <tr><td>I2S DOUT</td><td class="m pin">17</td><td>MAX98357A DIN</td><td></td></tr>
+      <tr><td>Amp shutdown</td><td class="m pin">18</td><td>MAX98357A SD_MODE</td><td>high = on/left, low = asleep</td></tr>
+      <tr><td>Battery sense</td><td class="m pin">1</td><td>2:1 divider from BAT+</td><td>ADC1_CH0, eFuse-calibrated read</td></tr>
+      <tr><td>Amp VIN</td><td class="m">—</td><td>BAT+ direct</td><td>not 3.3 V — the LDO can't take the peaks</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="perf"><span>Power</span></div>
+
+<main class="wrap">
+  <section>
+    <span class="num">06</span>
+    <h2>Where the 17.5 mAh goes</h2>
+  </section>
+</main>
+
+<div class="wide scroll">
+  <table>
+    <thead><tr><th>Contributor</th><th class="r">mAh/day</th><th class="r">share</th><th>What would reduce it</th></tr></thead>
+    <tbody>
+      <tr><td>Audio playback</td><td class="m r">6.88</td><td class="m r">39%</td><td>nothing worth doing — this is the product working</td></tr>
+      <tr><td>Light sleep floor</td><td class="m r">5.98</td><td class="m r">34%</td><td>deep sleep, at the cost of the whole interaction</td></tr>
+      <tr><td>WiFi sync</td><td class="m r">4.17</td><td class="m r">24%</td><td>the sync interval — the one real dial</td></tr>
+      <tr><td>Awake / counting</td><td class="m r">0.51</td><td class="m r">3%</td><td>already negligible at 80 MHz idle</td></tr>
+      <tr class="total"><td>Total</td><td class="m r">17.54</td><td class="m r">100%</td><td></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="wide">
+  <div class="chart">
+    <p class="chart-title">The sync interval has a knee, and it's at about an hour</p>
+    <p class="chart-sub">Battery life on a 2000 mAh cell vs how often the device fetches the bulletin</p>
+    <div style="position:relative">
+      <svg id="ch" viewBox="0 0 860 300" role="img" aria-label="Line chart: battery life on a 2000 mAh cell rises from 1.9 months at a 15-minute sync interval to 3.9 months at 240 minutes, with most of the gain arriving by 60 minutes."></svg>
+      <div id="tip"></div>
+    </div>
+  </div>
+  <figcaption style="font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);margin-top:11px">
+    Past about two hours it stops paying: light sleep and audio dominate, and the radio is no longer the problem. An hour is the sensible default — news that's 60 minutes stale is still news.</figcaption>
+</div>
+
+<main class="wrap">
+  <div class="perf"><span>Risks</span></div>
+
+  <section>
+    <span class="num">07</span>
+    <h2>What I can't verify from here</h2>
+    <p>The gesture engine is proven. These are the parts that need a board on a bench.</p>
+    <ul class="plain">
+      <li><b>PCNT API version.</b> <code>encoder.cpp</code> uses <code>driver/pulse_cnt.h</code>, the ESP-IDF 5.x API that ships with Arduino-ESP32 3.x. On 2.x you need the older <code>driver/pcnt.h</code> and the calls differ. <code>platformio.ini</code> pins the newer one, but this is the first thing that will bite you.</li>
+      <li><b>Audio library churn.</b> ESP8266Audio's I2S wrapper has moved around across Arduino-ESP32 versions. Everything library-specific hides behind three <code>void*</code> members in <code>player.h</code>, so ESP32-audioI2S is a contained swap if it fights you.</li>
+      <li><b>The 250 µA light-sleep figure.</b> It's the datasheet-plus-experience number for an S3 with WiFi off and RAM retained. Real dev boards leak — a power LED alone is 2–5 mA, which would be ten to twenty times the sleep budget. Measure it, and be prepared to desolder LEDs and check what the onboard USB-serial chip does when idle.</li>
+      <li><b><code>setInsecure()</code> in sync.cpp.</b> Fine fetching your own bulletin off your own LAN. Pin a root CA before it talks to anything you don't control.</li>
+      <li><b>Counts lost at wake.</b> PCNT doesn't run during light sleep, so the edge that wakes the chip isn't counted. That's 2.7 mm against a 45 mm first trigger — it vanishes into the noise gate, but it's a real known loss rather than something I've hidden.</li>
+    </ul>
+  </section>
+
+  <div class="perf"><span>What to do</span></div>
+
+  <section>
+    <span class="num">08</span>
+    <h2>The order I'd actually do this in</h2>
+    <p>My advice hasn't changed: <strong>don't port yet.</strong> Build Revision B on the Pi, live with it for a few weeks, and find out whether one-sheet-one-headline is the right interaction or whether depth-into-one-story is. That question is worth more than three months of battery life, and Python on real Linux is where you want to be while it's open.</p>
+    <p>The ESP32 build is what you do once you've stopped changing your mind. When that happens:</p>
+    <ul class="plain">
+      <li><b>Stand up the server first.</b> <code>python3 server/build_bulletin.py --out public --serve</code> on whatever machine is already on in your house. Point a browser at <code>bulletin.json</code> and confirm it looks right. This works today, with no ESP32 in the room.</li>
+      <li><b>Run the port diff before you flash anything.</b> If the gesture engine is wrong, every symptom above it will mislead you.</li>
+      <li><b>Bring up audio alone.</b> Board, amp, speaker, one MP3 on LittleFS, no encoder and no sleep. Nothing else matters until this is clean.</li>
+      <li><b>Then the encoder, then sync, then sleep — in that order.</b> Sleep last, always. Debugging a chip that keeps going to sleep while you're trying to talk to it is its own special misery.</li>
+      <li><b>Measure the sleep current before you trust any of my numbers.</b> A multimeter in series with the cell, everything idle. If it isn't in the hundreds of microamps, something on that dev board is awake that shouldn't be.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="wrap">
+  Broadsheet rev C · 22 tests including the C++ port diff · bs_motion.cpp and motion.py must stay identical
+</footer>
+
+<script>
+const D=[{i:15,m:1.9,e:30.0},{i:30,m:2.6,e:21.7},{i:60,m:3.2,e:17.5},
+         {i:120,m:3.7,e:15.4},{i:240,m:3.9,e:14.4}];
+(function(){
+  const svg=document.getElementById('ch'); if(!svg) return;
+  const W=860,H=300,L=52,R=88,T=18,B=44;
+  const xs=[15,30,60,120,240];
+  // log-ish spacing so the short intervals aren't crushed together
+  const X=v=>L+(Math.log(v)-Math.log(15))/(Math.log(240)-Math.log(15))*(W-L-R);
+  const Y=v=>H-B-(v/4.5)*(H-T-B);
+  const ns='http://www.w3.org/2000/svg';
+  const el=(n,a)=>{const e=document.createElementNS(ns,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+  [0,1,2,3,4].forEach(v=>{
+    svg.appendChild(el('line',{x1:L,y1:Y(v),x2:W-R,y2:Y(v),stroke:'var(--rule)','stroke-width':1}));
+    const t=el('text',{x:L-10,y:Y(v)+4,'text-anchor':'end','font-family':'IBM Plex Mono,monospace','font-size':11,fill:'var(--ink-3)'});
+    t.textContent=v+' mo'; svg.appendChild(t);
+  });
+  xs.forEach(v=>{
+    const t=el('text',{x:X(v),y:H-B+21,'text-anchor':'middle','font-family':'IBM Plex Mono,monospace','font-size':11,fill:'var(--ink-3)'});
+    t.textContent=v; svg.appendChild(t);
+  });
+  const ax=el('text',{x:L,y:H-8,'font-family':'IBM Plex Mono,monospace','font-size':10.5,fill:'var(--ink-3)','letter-spacing':'1.2'});
+  ax.textContent='SYNC INTERVAL, MINUTES'; svg.appendChild(ax);
+
+  const pts=D.map(d=>`${X(d.i)},${Y(d.m)}`).join(' ');
+  svg.appendChild(el('polygon',{points:`${X(15)},${Y(0)} ${pts} ${X(240)},${Y(0)}`,
+    fill:'var(--accent)','fill-opacity':0.09,stroke:'none'}));
+  svg.appendChild(el('polyline',{points:pts,fill:'none',stroke:'var(--accent)',
+    'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'}));
+  D.forEach(d=>svg.appendChild(el('circle',{cx:X(d.i),cy:Y(d.m),r:3.5,
+    fill:'var(--accent)',stroke:'var(--surface)','stroke-width':1.5})));
+
+  // mark the default
+  const def=D[2];
+  svg.appendChild(el('line',{x1:X(def.i),y1:T,x2:X(def.i),y2:Y(def.m),
+    stroke:'var(--accent)','stroke-width':1,'stroke-dasharray':'3 3'}));
+  const dl=el('text',{x:X(def.i)+9,y:T+14,'font-family':'IBM Plex Mono,monospace',
+    'font-size':10.5,fill:'var(--accent)'});
+  dl.textContent='default'; svg.appendChild(dl);
+
+  const last=D[D.length-1];
+  const lab=el('text',{x:X(last.i)+12,y:Y(last.m)+2,'font-family':'Bricolage Grotesque,sans-serif',
+    'font-size':17,'font-weight':700,fill:'var(--accent)'});
+  lab.textContent='3.9 mo'; svg.appendChild(lab);
+  const lab2=el('text',{x:X(last.i)+12,y:Y(last.m)+17,'font-family':'IBM Plex Mono,monospace',
+    'font-size':10,fill:'var(--ink-3)'});
+  lab2.textContent='diminishing'; svg.appendChild(lab2);
+
+  const tip=document.getElementById('tip');
+  const hl=el('line',{y1:T,y2:H-B,stroke:'var(--rule-2)','stroke-width':1,opacity:0});
+  const hd=el('circle',{r:4.5,fill:'var(--accent)',stroke:'var(--surface)','stroke-width':2,opacity:0});
+  svg.appendChild(hl); svg.appendChild(hd);
+  const hit=el('rect',{x:L,y:T,width:W-L-R,height:H-T-B,fill:'transparent'});
+  svg.appendChild(hit);
+  hit.addEventListener('pointermove',ev=>{
+    const r=svg.getBoundingClientRect();
+    const sx=(ev.clientX-r.left)*(W/r.width);
+    let best=D[0];
+    for(const d of D) if(Math.abs(X(d.i)-sx)<Math.abs(X(best.i)-sx)) best=d;
+    hl.setAttribute('x1',X(best.i)); hl.setAttribute('x2',X(best.i)); hl.setAttribute('opacity',1);
+    hd.setAttribute('cx',X(best.i)); hd.setAttribute('cy',Y(best.m)); hd.setAttribute('opacity',1);
+    tip.style.opacity=1;
+    tip.style.left=(X(best.i)/W*r.width)+'px';
+    tip.style.top=(Y(best.m)/H*r.height)+'px';
+    tip.textContent=`every ${best.i} min · ${best.m} months · ${best.e} mAh/day`;
+  });
+  hit.addEventListener('pointerleave',()=>{
+    hl.setAttribute('opacity',0); hd.setAttribute('opacity',0); tip.style.opacity=0;});
+})();
+</script>
+</body>
+</html>
