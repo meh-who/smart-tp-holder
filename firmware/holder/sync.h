@@ -51,4 +51,5 @@ bool online();
 bool load_cached(Bulletin& out);                            // last bulletin from flash, at boot
 void request_now();                                         // poke the task (e.g. after a button press)
 void note_played(const char* item_id);                      // reported in the next heartbeat
+bool phone_tapped();                                        // true once per new companion-page session
 }

@@ -77,11 +77,13 @@
 
 <section>
   <h2>2 · Wiring</h2>
+  <p>The full schematic is <code>schematic.png</code> (source <code>schematic.html</code>) alongside this guide; the table is the same information for the bench.</p>
   <table>
     <tr><th>Signal</th><th>ESP32-S3 GPIO</th><th>Goes to</th><th>Note</th></tr>
     <tr><td>Encoder A</td><td>4</td><td>wheel encoder outer pin</td><td>10 kΩ pull-up to 3V3, 10 nF to GND at the board end</td></tr>
     <tr><td>Encoder B</td><td>5</td><td>wheel encoder other outer pin</td><td>same RC. Middle pin of the encoder → GND</td></tr>
     <tr><td>Button</td><td>6</td><td>momentary → GND</td><td>internal pull-up; short press repeats, hold 2 s = new roll</td></tr>
+    <tr><td>Status LED</td><td>7</td><td>330 Ω → LED anode; cathode → GND</td><td>breathes while waiting, double-flashes when a phone opens the page, steady when online with a feed</td></tr>
     <tr><td>I2S BCLK</td><td>15</td><td>MAX98357A BCLK</td><td></td></tr>
     <tr><td>I2S LRC</td><td>16</td><td>MAX98357A LRC</td><td></td></tr>
     <tr><td>I2S DIN</td><td>17</td><td>MAX98357A DIN</td><td></td></tr>
@@ -100,6 +102,7 @@
   encoder B ◄──────────┤ GPIO5 ◄────────┘───┼── 10nF → GND
   encoder common ──────┤ GND                │
   button ──────────────┤ GPIO6 (pull-up)    │
+  LED ◄── 330Ω ────────┤ GPIO7 (PWM)        │
                        │ GPIO15 ────────────┼── BCLK
                        │ GPIO16 ────────────┼── LRC
                        │ GPIO17 ────────────┼── DIN
@@ -189,6 +192,7 @@ docker exec holder python manage.py tag-url lisbon-01     # → write this to th
     <li>☐ Wall bracket level at 700 mm; USB cable dressed; adapter plugged in; LED on.</li>
     <li>☐ Serial console (or the page) shows <b>Online</b> within 60 s on the venue wi-fi. If the venue has a captive portal, use your own hotspot or a travel router — the ESP32 cannot click “Accept”.</li>
     <li>☐ Tap tag with an iPhone and an Android. Page opens, shows <b>Online</b>, <b>Now reading: News</b>.</li>
+    <li>☐ LED: breathing on power-up, steady once the page shows Online, a double flash when you tap the tag.</li>
     <li>☐ Pull three sheets → three items, in order, ~13 s of speech. Backlog: pull a metre → stops after four items.</li>
     <li>☐ Switch to a second source on the page → “Preparing…” → within 20 s the holder says <em>“Now reading TikTok.”</em> and the next sheet is from it.</li>
     <li>☐ Hold the button 2 s → <em>“New roll.”</em> Page shows 200 sheets left.</li>
@@ -212,7 +216,7 @@ docker exec holder python manage.py tag-url lisbon-01     # → write this to th
   </table>
 </section>
 
-<p class="muted" style="margin-top:48px">Files: <code>firmware/holder/</code> (Arduino sketch, 6 files), <code>firmware/test/</code> (gesture engine test, runs on a laptop), <code>server/</code> (FastAPI app, companion page, Dockerfile), <code>docs/sensor-mounting.html</code> (arm geometry, to scale).</p>
+<p class="muted" style="margin-top:48px">Files: <code>firmware/holder/</code> (Arduino sketch, 8 files), <code>firmware/test/</code> (gesture engine test, runs on a laptop), <code>server/</code> (FastAPI app, companion page, Dockerfile), <code>docs/sensor-mounting.html</code> (arm geometry, to scale).</p>
 </main>
 </body>
 </html>

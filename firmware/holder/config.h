@@ -35,6 +35,7 @@
 #define PIN_I2S_DIN   17    // MAX98357A DIN
 #define PIN_AMP_SD    18    // MAX98357A SD_MODE: high = on (left ch), low = sleep
 #define PIN_VBAT      1     // 2:1 divider from BAT+ (unused on mains)
+#define PIN_LED       7     // status LED through 330 Ω to GND (PWM via LEDC)
 
 // ---- Wheel calibration ------------------------------------------------------
 // Surface travel per quadrature count. 21 mm wheel (pi*21 = 65.97 mm/rev) on a

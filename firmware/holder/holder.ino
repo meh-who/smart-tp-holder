@@ -9,6 +9,8 @@
 //     cached / paper left".
 //   * A source change is announced with a short clip ("Now reading X.") and
 //     the item queue is cleared, so the next sheet speaks from the new feed.
+//   * One status LED: breathes while waiting, double-flashes when a phone opens
+//     the companion page, steady when online with a feed (led.h).
 //
 // Libraries (Arduino Library Manager): ESP32Encoder, ESP8266Audio, ArduinoJson 7.
 // Board: "ESP32S3 Dev Module" (or your Feather/XIAO), partition scheme with a
@@ -27,6 +29,7 @@
 #include "bs_motion.h"
 #include "player.h"
 #include "sync.h"
+#include "led.h"
 
 static ESP32Encoder    encoder;
 static bs::MotionEngine engine;
@@ -34,6 +37,7 @@ static Player          player;
 static HolderStatus    status;
 static Bulletin        bulletin;
 static Preferences     prefs;
+static StatusLed       led;
 
 static float    mm_per_count = MM_PER_COUNT_DEFAULT;
 static int64_t  last_count = 0;
@@ -167,6 +171,8 @@ void setup() {
   last_count = 0;
 
   player.begin();
+  led.begin(PIN_LED);
+  led.set(StatusLed::Mode::WAITING);
   load_played();
   if (sync::load_cached(bulletin)) Serial.printf("[holder] cached bulletin %s (%u items, %s)\n", bulletin.version, bulletin.count, bulletin.source);
   sync::begin(&status);
@@ -223,6 +229,13 @@ void loop() {
 
   status.queued = player.queued();
   status.playing = player.playing();
+
+  // LED: steady once we are online with a feed to read; breathe while waiting;
+  // a double flash the moment a phone opens the companion page.
+  led.set((status.online && bulletin.count > 0) ? StatusLed::Mode::READY : StatusLed::Mode::WAITING);
+  if (sync::phone_tapped()) led.paired();
+  led.loop();
+
   handle_button(now);
   handle_serial();
 

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Schematic — holder rev 2.1</title>
+<style>
+  body { margin: 0; background: #fff; font-family: ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
+  svg { display: block; }
+  .t  { font-size: 13px; fill: #1e1b17; }
+  .s  { font-size: 11px; fill: #6c655a; }
+  .h  { font-size: 15px; font-weight: 600; fill: #1e1b17; }
+  .pin { font-size: 11px; font-family: ui-monospace, Menlo, monospace; fill: #1e1b17; }
+  .net { font-size: 10.5px; font-family: ui-monospace, Menlo, monospace; fill: #6c655a; }
+  .box { fill: #fbf8f2; stroke: #1e1b17; stroke-width: 1.4; }
+  .wire { fill: none; stroke: #1e1b17; stroke-width: 1.4; }
+  .pwr  { fill: none; stroke: #c8522b; stroke-width: 1.6; }
+  .gnd  { fill: none; stroke: #6c655a; stroke-width: 1.4; }
+  .i2s  { fill: none; stroke: #2f6fb3; stroke-width: 1.4; }
+  .dot  { fill: #1e1b17; }
+  .note { font-size: 11px; fill: #c8522b; }
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="920" viewBox="0 0 1320 920">
+  <text x="24" y="34" class="h">Smart toilet-roll holder — rev 2.1 — ESP32-S3 wiring schematic</text>
+  <text x="24" y="54" class="s">Mains-powered (USB-C 5 V 2 A). Encoder on the follower arm, I2S amp + speaker in the enclosure, one status LED, NFC tag (no wires) under the recessed top.</text>
+
+  <!-- ESP32-S3 -->
+  <rect x="520" y="120" width="300" height="480" rx="10" class="box"/>
+  <text x="670" y="148" text-anchor="middle" class="h">ESP32-S3 board</text>
+  <text x="670" y="166" text-anchor="middle" class="s">(Feather / XIAO / DevKitC — any with native USB)</text>
+  <g class="pin">
+    <text x="530" y="214">GPIO4</text><text x="530" y="254">GPIO5</text><text x="530" y="294">GPIO6</text>
+    <text x="530" y="334">GPIO7</text><text x="530" y="404">3V3</text><text x="530" y="474">GND</text><text x="530" y="564">USB-C</text>
+  </g>
+  <g class="pin" text-anchor="end">
+    <text x="810" y="214">GPIO15</text><text x="810" y="254">GPIO16</text><text x="810" y="294">GPIO17</text>
+    <text x="810" y="334">GPIO18</text><text x="810" y="404">5V / VBUS</text><text x="810" y="474">GND</text>
+  </g>
+  <g class="wire">
+    <line x1="520" y1="210" x2="490" y2="210"/><line x1="520" y1="250" x2="490" y2="250"/>
+    <line x1="520" y1="290" x2="490" y2="290"/><line x1="520" y1="330" x2="490" y2="330"/>
+    <line x1="820" y1="210" x2="850" y2="210"/><line x1="820" y1="250" x2="850" y2="250"/>
+    <line x1="820" y1="290" x2="850" y2="290"/><line x1="820" y1="330" x2="850" y2="330"/>
+    <line x1="820" y1="400" x2="850" y2="400"/><line x1="820" y1="470" x2="850" y2="470"/>
+  </g>
+  <path d="M520 400 H490" class="pwr"/><path d="M520 470 H490" class="gnd"/>
+
+  <!-- 3V3 rail (left) and GND bus (left) -->
+  <path d="M490 400 H300 V170" class="pwr"/><text x="304" y="166" class="net">3V3 rail</text>
+  <path d="M490 470 H280 V640 H24" class="gnd"/><text x="286" y="636" class="net">GND bus</text>
+
+  <!-- ENCODER -->
+  <rect x="24" y="150" width="230" height="140" rx="10" class="box"/>
+  <text x="139" y="176" text-anchor="middle" class="h">Scroll-wheel encoder</text>
+  <text x="139" y="192" text-anchor="middle" class="s">uxcell 13 mm, declicked, follower arm</text>
+  <g class="pin"><text x="36" y="222">A</text><text x="36" y="252">C (common)</text><text x="36" y="282">B</text></g>
+  <!-- A: 10k pull-up to 3V3, 10nF to GND, then GPIO4 -->
+  <path d="M254 218 H330" class="wire"/>
+  <circle cx="330" cy="218" r="2.5" class="dot"/>
+  <path d="M330 218 V200" class="wire"/><rect x="324" y="186" width="12" height="14" class="box" transform="rotate(0)"/>
+  <path d="M330 186 V170 H300" class="pwr"/><text x="340" y="196" class="net">10 kΩ</text>
+  <path d="M330 218 H400" class="wire"/><circle cx="400" cy="218" r="2.5" class="dot"/>
+  <path d="M400 218 V232" class="wire"/><line x1="392" y1="232" x2="408" y2="232" class="wire"/><line x1="392" y1="237" x2="408" y2="237" class="wire"/>
+  <path d="M400 237 V300 H420" class="gnd"/><text x="408" y="248" class="net">10 nF</text>
+  <path d="M400 218 H490 V210" class="wire"/>
+  <!-- B -->
+  <path d="M254 278 H350" class="wire"/>
+  <circle cx="350" cy="278" r="2.5" class="dot"/>
+  <path d="M350 278 V262" class="wire"/><rect x="344" y="248" width="12" height="14" class="box"/>
+  <path d="M350 248 V240 H330" class="pwr"/><text x="360" y="258" class="net">10 kΩ</text>
+  <path d="M350 278 H440" class="wire"/><circle cx="440" cy="278" r="2.5" class="dot"/>
+  <path d="M440 278 V292" class="wire"/><line x1="432" y1="292" x2="448" y2="292" class="wire"/><line x1="432" y1="297" x2="448" y2="297" class="wire"/>
+  <path d="M440 297 V300 H420" class="gnd"/><text x="448" y="308" class="net">10 nF</text>
+  <path d="M420 300 V470 H490" class="gnd"/>
+  <path d="M440 278 H490 V250" class="wire"/>
+  <!-- common to GND bus -->
+  <path d="M254 248 H268 V640" class="gnd"/>
+
+  <!-- BUTTON -->
+  <rect x="24" y="340" width="230" height="64" rx="10" class="box"/>
+  <text x="139" y="364" text-anchor="middle" class="h">Button</text>
+  <text x="139" y="380" text-anchor="middle" class="s">short: repeat · hold 2 s: new roll</text>
+  <text x="139" y="394" text-anchor="middle" class="s">GPIO6 uses the internal pull-up</text>
+  <path d="M254 372 H470 V290 H490" class="wire"/>
+  <path d="M24 372 H12 V640 H24" class="gnd"/>
+
+  <!-- LED -->
+  <rect x="24" y="440" width="230" height="80" rx="10" class="box"/>
+  <text x="139" y="464" text-anchor="middle" class="h">Status LED</text>
+  <text x="139" y="480" text-anchor="middle" class="s">3 mm warm white, diffused, top edge</text>
+  <text x="139" y="496" text-anchor="middle" class="s">off · breathe · double flash · steady</text>
+  <text x="139" y="511" text-anchor="middle" class="s">anode ← 330 Ω ← GPIO7 · cathode → GND</text>
+  <path d="M490 330 H456 V480 H380" class="wire"/>
+  <rect x="340" y="474" width="40" height="12" class="box"/><text x="360" y="469" text-anchor="middle" class="net">330 Ω</text>
+  <path d="M340 480 H300" class="wire"/>
+  <polygon points="300,473 300,487 288,480" class="dot"/><line x1="288" y1="473" x2="288" y2="487" class="wire"/>
+  <path d="M288 480 H254" class="wire"/>
+  <path d="M24 480 H12" class="gnd"/>
+
+  <!-- USB -->
+  <rect x="24" y="680" width="230" height="60" rx="10" class="box"/>
+  <text x="139" y="704" text-anchor="middle" class="h">Wall adapter</text>
+  <text x="139" y="720" text-anchor="middle" class="s">USB-C, 5 V, a real 2 A (phone charger)</text>
+  <path d="M254 710 H560 V600" class="pwr"/>
+  <text x="300" y="704" class="note">USB-C cable — also the serial console for calibration</text>
+
+  <!-- MAX98357A -->
+  <rect x="960" y="150" width="210" height="350" rx="10" class="box"/>
+  <text x="1065" y="176" text-anchor="middle" class="h">MAX98357A</text>
+  <text x="1065" y="192" text-anchor="middle" class="s">I2S class-D amp breakout</text>
+  <g class="pin">
+    <text x="972" y="214">BCLK</text><text x="972" y="254">LRC</text><text x="972" y="294">DIN</text>
+    <text x="972" y="334">SD_MODE</text><text x="972" y="404">VIN</text><text x="972" y="444">GND</text><text x="972" y="484">GAIN</text>
+  </g>
+  <g class="pin" text-anchor="end"><text x="1160" y="404">+ OUT</text><text x="1160" y="444">− OUT</text></g>
+  <path d="M850 210 H960" class="i2s"/><path d="M850 250 H960" class="i2s"/><path d="M850 290 H960" class="i2s"/><path d="M850 330 H960" class="wire"/>
+  <text x="880" y="204" class="net">BCLK</text><text x="880" y="244" class="net">LRC</text><text x="880" y="284" class="net">DIN</text><text x="880" y="324" class="net">amp enable</text>
+  <path d="M850 400 H960" class="pwr"/><text x="856" y="394" class="net">5 V</text>
+  <path d="M850 470 H900 V440 H960" class="gnd"/><text x="856" y="464" class="net">GND</text>
+  <circle cx="920" cy="400" r="2.5" class="dot"/><circle cx="920" cy="440" r="2.5" class="dot"/>
+  <path d="M920 400 V414" class="wire"/><line x1="912" y1="414" x2="928" y2="414" class="wire"/><line x1="912" y1="419" x2="928" y2="419" class="wire"/><path d="M920 419 V440" class="wire"/>
+  <text x="912" y="430" text-anchor="end" class="net">470 µF + 100 nF</text>
+  <path d="M960 480 H940 V400" class="pwr"/><text x="1065" y="520" text-anchor="middle" class="net">GAIN strapped to VIN = +12 dB</text>
+  <path d="M1170 400 H1210" class="wire"/><path d="M1170 440 H1210" class="wire"/>
+  <rect x="1210" y="390" width="20" height="60" class="box"/>
+  <polygon points="1230,390 1270,370 1270,470 1230,450" class="box"/>
+  <text x="1250" y="492" text-anchor="middle" class="s">40 mm, 4–8 Ω</text>
+  <text x="1250" y="506" text-anchor="middle" class="s">sealed back volume</text>
+  <text x="1065" y="548" text-anchor="middle" class="note">Bridge-tied output: never ground a speaker terminal.</text>
+
+  <!-- NFC -->
+  <rect x="960" y="580" width="210" height="80" rx="10" class="box" stroke-dasharray="5 4"/>
+  <text x="1065" y="606" text-anchor="middle" class="h">NFC tag</text>
+  <text x="1065" y="622" text-anchor="middle" class="s">NTAG215 sticker under the recessed top</text>
+  <text x="1065" y="638" text-anchor="middle" class="s">URL record → https://…/r/&lt;holder-id&gt;</text>
+  <text x="1065" y="654" text-anchor="middle" class="note">No wires. The phone is the reader.</text>
+
+  <!-- legend -->
+  <g transform="translate(24,770)">
+    <line x1="0" y1="0" x2="30" y2="0" class="pwr"/><text x="38" y="4" class="s">power (3V3 / 5 V)</text>
+    <line x1="170" y1="0" x2="200" y2="0" class="gnd"/><text x="208" y="4" class="s">ground</text>
+    <line x1="290" y1="0" x2="320" y2="0" class="i2s"/><text x="328" y="4" class="s">I2S audio</text>
+    <line x1="420" y1="0" x2="450" y2="0" class="wire"/><text x="458" y="4" class="s">signal</text>
+  </g>
+  <g class="t" transform="translate(24,800)">
+    <text y="0">Pin map (config.h): ENC_A 4 · ENC_B 5 · BUTTON 6 · LED 7 · I2S BCLK 15 · LRC 16 · DIN 17 · AMP_SD 18.</text>
+    <text y="22">Encoder A/B: twisted pair, routed away from the speaker leads, JST-PH at the board end. The RC debounce (10 kΩ / 10 nF — not 100 nF) sits at the board end.</text>
+    <text y="44">Power: the amp takes 5 V from the board's VBUS pin, not 3V3 (the LDO cannot supply the peaks); 470 µF across VIN–GND right at the amp.</text>
+    <text y="66">NFC: a passive tag, ≥ 30 mm from the speaker magnet; on-metal type if the lid is metal; write and lock it with the NFC Tools app.</text>
+    <text y="88">Battery option: MAINS_POWERED 0 in config.h — the board runs from its own LiPo connector and light-sleeps between pulls; add the 2 × 100 kΩ divider to GPIO1 for the gauge.</text>
+  </g>
+</svg>
+</body>
+</html>

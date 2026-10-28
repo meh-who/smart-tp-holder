@@ -86,6 +86,7 @@ def _services(hid):
 @app.get("/r/{hid}", response_class=HTMLResponse)
 def page(hid: str, response: Response):
     _holder_or_404(hid)
+    db.note_page_open(hid)          # the holder double-flashes its LED on the next heartbeat
     with open(os.path.join(HERE, "static", "companion.html"), encoding="utf-8") as f:
         html = f.read().replace("__HOLDER_ID__", hid)
     resp = HTMLResponse(html)
@@ -204,6 +205,7 @@ async def heartbeat(hid: str, request: Request):
     ready = b and b["payload"]
     return {"source": b["source"] if ready else h["source"],
             "bulletin": b["version"] if ready else "",
+            "page_open_ts": h.get("last_page_open") or 0,
             "poll_s": POLL_S}
 
 

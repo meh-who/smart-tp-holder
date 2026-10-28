@@ -36,6 +36,9 @@ def init():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     with conn() as c:
         c.executescript(SCHEMA)
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(holders)")}
+        if "last_page_open" not in cols:           # added in rev 2.1 (LED "paired" flash)
+            c.execute("ALTER TABLE holders ADD COLUMN last_page_open REAL")
 
 
 @contextmanager
@@ -71,6 +74,11 @@ def list_holders():
 def set_desired_source(hid, source):
     with conn() as c:
         c.execute("UPDATE holders SET desired_source=? WHERE id=?", (source, hid))
+
+
+def note_page_open(hid):
+    with conn() as c:
+        c.execute("UPDATE holders SET last_page_open=? WHERE id=?", (time.time(), hid))
 
 
 def set_source(hid, source):

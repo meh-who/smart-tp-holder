@@ -19,6 +19,8 @@ char               g_current_source[16]  = "";
 volatile bool      g_poke = false;
 char               g_played[16][24];       // ids spoken since the last heartbeat
 volatile uint8_t   g_played_n = 0;
+double             g_page_open_ts = 0;      // server timestamp of the last companion-page open
+volatile bool      g_phone_tapped = false;
 
 String url(const char* path) { return String(SERVER_URL) + path; }
 
@@ -166,6 +168,11 @@ uint32_t heartbeat() {
   xSemaphoreGive(g_mutex);
   g_status->online = true;
 
+  double page_ts = r["page_open_ts"] | 0.0;
+  if (page_ts > g_page_open_ts) {
+    if (g_page_open_ts > 0) g_phone_tapped = true;   // not on the very first heartbeat after boot
+    g_page_open_ts = page_ts;
+  }
   const char* want_version = r["bulletin"] | "";
   const char* want_source  = r["source"] | "";
   if (strcmp(want_version, g_current_version) != 0 || strcmp(want_source, g_current_source) != 0) {
@@ -267,6 +274,7 @@ bool load_cached(Bulletin& out) {
 
 bool online() { return g_status && g_status->online; }
 void request_now() { g_poke = true; }
+bool phone_tapped() { bool t = g_phone_tapped; g_phone_tapped = false; return t; }
 void note_played(const char* item_id) {
   if (!item_id || !*item_id) return;
   xSemaphoreTake(g_mutex, portMAX_DELAY);
