@@ -66,7 +66,7 @@
   <h2>1 · Parts <small>what you have, and what is still missing</small></h2>
   <table>
     <tr><th>Have</th><th>Use</th></tr>
-    <tr><td>Adafruit HUZZAH32 – ESP32 Feather</td><td>The controller. Original ESP32 (not S3): micro-USB, 4 MB flash, no PSRAM. The firmware picks the right pins automatically when you select this board.</td></tr>
+    <tr><td>Adafruit ESP32-S2 Feather</td><td>The controller. Single-core ESP32-S2, USB-C with native USB, 4 MB flash, 2 MB PSRAM. The firmware picks the right pins automatically when you select this board.</td></tr>
     <tr><td>MAX98357A I2S amp ×2</td><td>One in the build, one spare. Solder the 7-pin header and the blue screw terminal.</td></tr>
     <tr><td>DWEII 3 W 8 Ω speaker ×4</td><td>One in the build. Its JST-PH plug does not fit the amp's screw terminal — use a JST-PH 2-pin pigtail, or cut the plug off and strip 5 mm.</td></tr>
     <tr><td>uxcell encoders (25)</td><td>Use the 13 mm height only. Declick two or three and keep the smoothest.</td></tr>
@@ -75,8 +75,8 @@
   <table>
     <tr><th>Still to get</th><th>Spec</th><th>≈USD</th></tr>
     <tr><td>NFC sticker tags</td><td>NTAG215 or NTAG216, 25–30 mm. On-metal type only if the lid is metal.</td><td>8 / 10-pack</td></tr>
-    <tr><td>Micro-USB <b>data</b> cable, 2 m</td><td>Some cables are charge-only and the computer will not see the board. White, since it runs down the wall.</td><td>8</td></tr>
-    <tr><td>5 V 2 A USB wall adapter</td><td>Any phone charger that is really 2 A (USB-A out, to suit the cable).</td><td>8</td></tr>
+    <tr><td>USB-C <b>data</b> cable, 2 m</td><td>Some cables are charge-only and the computer will not see the board. White, since it runs down the wall.</td><td>8</td></tr>
+    <tr><td>5 V 2 A USB wall adapter</td><td>Any phone charger that is really 2 A, with the right socket for your cable (USB-A or USB-C).</td><td>8</td></tr>
     <tr><td>Resistor + ceramic capacitor kits</td><td>Need 2 × 10 kΩ, 1 × 330 Ω, 2 × 10 nF ("103"), 1 × 100 nF ("104").</td><td>12</td></tr>
     <tr><td>470 µF electrolytic, 10 V or higher</td><td>Across the amp's VIN–GND. Mind the stripe (negative).</td><td>1</td></tr>
     <tr><td>3 mm LED, warm white or amber, diffused</td><td>The status dot. Amber reads better at the ESP32's low drive current.</td><td>5 / pack</td></tr>
@@ -88,38 +88,38 @@
     <tr><td>Torsion spring (or a rubber band to start)</td><td>5–15 gf at the tyre.</td><td>2</td></tr>
     <tr><td>Soldering iron, solder, flush cutters, multimeter</td><td>If you don't already have them. The Feather and the amps come with loose headers.</td><td>—</td></tr>
   </table>
-  <p class="muted">Not needed on mains: the LiPo and any voltage divider (the Feather has a battery gauge built in on A13).</p>
+  <p class="muted">Not needed on mains: the LiPo and any voltage divider (the Feather has a battery gauge chip built in).</p>
 </section>
 
 <section>
   <h2>2 · Wiring</h2>
-  <p>The schematic is <code>schematic.png</code> next to this guide. Pin names below are as printed on the HUZZAH32.</p>
+  <p>The schematic is <code>schematic.png</code> next to this guide. Pin names below are as printed on the ESP32-S2 Feather.</p>
   <table>
-    <tr><th>From</th><th>HUZZAH32 pin</th><th>Note</th></tr>
-    <tr><td>Encoder A</td><td><b>32</b></td><td>10 kΩ to 3V, 10 nF to GND, at the board end</td></tr>
-    <tr><td>Encoder B</td><td><b>33</b></td><td>same RC</td></tr>
+    <tr><th>From</th><th>Feather pin</th><th>Note</th></tr>
+    <tr><td>Encoder A</td><td><b>5</b></td><td>10 kΩ to 3V, 10 nF to GND, at the board end</td></tr>
+    <tr><td>Encoder B</td><td><b>9</b></td><td>same RC</td></tr>
     <tr><td>Encoder C (middle pin)</td><td><b>GND</b></td><td>confirm with a meter: the common pin shows continuity to both A and B as you turn slowly</td></tr>
-    <tr><td>Button</td><td><b>27</b> and GND</td><td>internal pull-up, nothing else needed</td></tr>
-    <tr><td>Status LED</td><td><b>21</b> → 330 Ω → long leg; short leg → GND</td><td>breathes while waiting, double-flashes on a phone tap, steady when ready</td></tr>
-    <tr><td>Amp BCLK</td><td><b>A0</b></td><td>(GPIO26)</td></tr>
-    <tr><td>Amp LRC</td><td><b>A1</b></td><td>(GPIO25)</td></tr>
-    <tr><td>Amp DIN</td><td><b>A5</b></td><td>(GPIO4)</td></tr>
-    <tr><td>Amp SD</td><td><b>MO</b></td><td>(GPIO18) amp on/off; high = on</td></tr>
-    <tr><td>Amp VIN</td><td><b>USB</b></td><td>5 V from the micro-USB jack. <b>Not 3V</b>. 470 µF + 100 nF across VIN–GND at the amp</td></tr>
+    <tr><td>Button</td><td><b>11</b> and GND</td><td>internal pull-up, nothing else needed</td></tr>
+    <tr><td>Status LED</td><td><b>A5</b> → 330 Ω → long leg; short leg → GND</td><td>breathes while waiting, double-flashes on a phone tap, steady when ready</td></tr>
+    <tr><td>Amp BCLK</td><td><b>A0</b></td><td>(GPIO18)</td></tr>
+    <tr><td>Amp LRC</td><td><b>A1</b></td><td>(GPIO17)</td></tr>
+    <tr><td>Amp DIN</td><td><b>A2</b></td><td>(GPIO16)</td></tr>
+    <tr><td>Amp SD</td><td><b>A3</b></td><td>(GPIO15) amp on/off; high = on. The four amp signals are A0–A3 in a row.</td></tr>
+    <tr><td>Amp VIN</td><td><b>USB</b></td><td>5 V from the USB-C jack. <b>Not 3V</b>. 470 µF + 100 nF across VIN–GND at the amp</td></tr>
     <tr><td>Amp GND</td><td><b>GND</b></td><td></td></tr>
     <tr><td>Amp GAIN</td><td>leave open</td><td>9 dB. If too quiet, wire GAIN to GND for 12 dB. (Not to VIN: that gives 6 dB.)</td></tr>
     <tr><td>Speaker</td><td>amp screw terminal + / −</td><td><b>never</b> ground a speaker terminal; the output is bridge-tied</td></tr>
     <tr><td>NFC tag</td><td>none</td><td>stuck under the recessed top; the phone is the reader</td></tr>
   </table>
-  <p>Avoid pin <b>12</b> for anything with a pull-up (the board won't boot), and A2/A3/A4/A13 (input-only). The Feather's header has only one GND pin on the long side, so make a ground bus on the perma-proto and run everything to it.</p>
+  <p>Leave 13 (red LED), the BOOT button and the onboard NeoPixel alone. The Feather has only one GND pin, on the long side, so make a ground bus on the perma-proto and run everything to it.</p>
 </section>
 
 <section>
   <h2>3 · Assembly, in order</h2>
   <ol class="steps">
-    <li><b>Headers.</b> Solder the long header strip onto the HUZZAH32 and the 7-pin header plus the screw terminal onto one MAX98357A. Push the headers into a breadboard first so they solder straight.</li>
-    <li><b>Bench test 1: sound.</b> On a breadboard, wire the amp only (VIN→USB, GND, BCLK→A0, LRC→A1, DIN→A5, SD→MO) and the speaker. Flash <code>firmware/bringup/bringup.ino</code>. You should hear a two-note chime. Fix this before going further.</li>
-    <li><b>Bench test 2: LED and button.</b> Add the LED (21 → 330 Ω → long leg, short leg → GND) and the button (27 ↔ GND). Reset: the LED breathes, flashes twice, and the Serial Monitor prints “button down / up”.</li>
+    <li><b>Headers.</b> Solder the header strips onto the Feather (if yours came without them) and the 7-pin header plus the screw terminal onto one MAX98357A. Push the headers into a breadboard first so they solder straight.</li>
+    <li><b>Bench test 1: sound.</b> On a breadboard, wire the amp only (VIN→USB, GND, BCLK→A0, LRC→A1, DIN→A2, SD→A3) and the speaker. Flash <code>firmware/bringup/bringup.ino</code> (first upload: hold BOOT, tap RESET, release BOOT, then Upload). You should hear a two-note chime. Fix this before going further.</li>
+    <li><b>Bench test 2: LED and button.</b> Add the LED (A5 → 330 Ω → long leg, short leg → GND) and the button (11 ↔ GND). Reset: the LED breathes, flashes twice, and the Serial Monitor prints “button down / up”.</li>
     <li><b>Declick the encoder.</b> Open the can's tabs, lift the detent spring out, close. Flick test: the rotor must coast, not stop at the next click. Do several; keep the smoothest.</li>
     <li><b>Fit the G403 wheel.</b> Its shaft has a flat-sided end and a round end. Push the flat end into the encoder rotor: it should key snugly and turn the rotor without slipping. If it's loose, a thin sleeve of heat-shrink on the shaft end or a drop of thin CA fixes it. Measure the round end with calipers — that decides the bearing (parts list).</li>
     <li><b>Encoder board.</b> Solder the encoder to a scrap of perfboard; 28–30 AWG silicone wires (A, C, B) as a twisted bundle to a 3-pin JST-PH. Put the two 10 kΩ / 10 nF pairs on the main board end, not at the encoder.</li>
@@ -153,7 +153,8 @@
   <ol class="steps">
     <li><b>Arduino IDE 2.x</b>, Boards Manager → <code>esp32</code> by Espressif (3.x).</li>
     <li><b>Libraries</b> (Library Manager): <code>ESP32Encoder</code>, <code>ESP8266Audio</code>, <code>ArduinoJson</code> (7.x).</li>
-    <li><b>Board settings:</b> Tools → Board → esp32 → <b>Adafruit ESP32 Feather</b> (or “ESP32 Dev Module”) · Partition Scheme: <b>No OTA (2MB APP/2MB SPIFFS)</b> — the default leaves too little room for the voice clips · Upload Speed 921600 · Port: the one that appears when you plug the board in (if none appears, the cable is charge-only).</li>
+    <li><b>Board settings:</b> Tools → Board → esp32 → <b>Adafruit Feather ESP32-S2</b> (or “ESP32S2 Dev Module”) · USB CDC On Boot: <b>Enabled</b> (otherwise the Serial Monitor stays blank) · Partition Scheme: <b>No OTA (2MB APP/2MB SPIFFS)</b> — the default leaves too little room for the voice clips · Port: the one that appears when you plug the board in (if none appears, the cable is charge-only).</li>
+    <li><b>First upload only:</b> hold <b>BOOT</b>, tap <b>RESET</b>, release BOOT, then click Upload; tap RESET when it says done. Later uploads don't need the buttons.</li>
     <li><b>Edit <code>config.h</code>:</b> <code>HOLDER_ID</code>, <code>HOLDER_KEY</code> (from <code>python manage.py key</code>), <code>WIFI_SSID/PASS</code>, <code>SERVER_URL</code>. Leave <code>MAINS_POWERED 1</code>.</li>
     <li><b>Upload</b>, open Serial Monitor at 115200. You should see the IP, then <code>[sync] bulletin …: N items from news</code> within half a minute.</li>
     <li><b>Pull a sheet.</b> It speaks. If the count runs backwards (<code>status</code> shows travel not increasing), set <code>ENCODER_INVERT 1</code> or swap A and B.</li>
@@ -215,7 +216,7 @@ docker exec holder python manage.py tag-url lisbon-01     # → write this to th
   <table>
     <tr><th>Symptom</th><th>Look at</th></tr>
     <tr><td>Page says “Not heard from yet”</td><td>Wrong <code>SERVER_URL</code> or <code>HOLDER_KEY</code> (server log shows 401), or wi-fi. Serial console tells you which.</td></tr>
-    <tr><td>Speaks only on the first pull after boot, then silence</td><td>Amp SD wiring (pin MO) or the 5 V rail sagging — check the 470 µF, use a real 2 A adapter.</td></tr>
+    <tr><td>Speaks only on the first pull after boot, then silence</td><td>Amp SD wiring (pin A3) or the 5 V rail sagging — check the 470 µF, use a real 2 A adapter.</td></tr>
     <tr><td>Items fire on wobble or not at all</td><td>Calibration (<code>status</code> → mm/count), debounce caps, or the tyre skidding: more spring preload, cleaner O-ring.</td></tr>
     <tr><td>Switching takes minutes</td><td>TTS is slow on first build (edge ≈ 1 s per item). Warm the cache with <code>manage.py build</code> for every source before opening.</td></tr>
     <tr><td>Phone opens the page but buttons say “open the page from the holder's tag”</td><td>Cookies blocked (private browsing). Normal browsing mode, or re-tap.</td></tr>

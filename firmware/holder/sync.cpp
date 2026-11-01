@@ -24,6 +24,15 @@ volatile bool      g_phone_tapped = false;
 
 String url(const char* path) { return String(SERVER_URL) + path; }
 
+// On single-core chips (ESP32-S2) the network work shares the CPU with the MP3
+// decoder, so a TLS handshake mid-sentence can make the voice stutter. Wait for
+// the current clip to finish (up to a minute) before doing anything heavy.
+void wait_quiet() {
+#if CONFIG_FREERTOS_UNICORE || defined(CONFIG_IDF_TARGET_ESP32S2)
+  for (int i = 0; i < 600 && g_status && g_status->playing; ++i) vTaskDelay(pdMS_TO_TICKS(100));
+#endif
+}
+
 void make_client(WiFiClientSecure& c) {
 #if INSECURE_TLS
   c.setInsecure();
@@ -47,6 +56,7 @@ bool ensure_wifi() {
 // exists is already correct, so this is skipped when it is present.
 bool download(const String& u, const char* path) {
   if (LittleFS.exists(path)) return true;
+  wait_quiet();
   WiFiClientSecure client; make_client(client);
   HTTPClient http; http.begin(client, u);
   http.addHeader("X-Holder-Key", HOLDER_KEY);
@@ -188,6 +198,7 @@ void task(void*) {
     uint32_t wait_s = MAINS_POWERED ? POLL_MAINS_S : POLL_BATTERY_S;
     if (ensure_wifi()) {
       g_status->rssi = WiFi.RSSI();
+      wait_quiet();
       uint32_t p = heartbeat();
       if (p) wait_s = p; else g_status->online = false;
     } else {

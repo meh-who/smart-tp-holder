@@ -1,7 +1,8 @@
 // bringup.ino — bench test for the holder hardware, one part at a time.
 // No wi-fi, no server, no SD card. Flash this first; flash holder/ after it passes.
 //
-// Board: Adafruit HUZZAH32 ("Adafruit ESP32 Feather"). Libraries: ESP32Encoder,
+// Board: "Adafruit Feather ESP32-S2", USB CDC On Boot: Enabled (first upload: hold
+// BOOT, tap RESET, release BOOT). Also runs on a HUZZAH32. Libraries: ESP32Encoder,
 // ESP8266Audio (the same two the real firmware uses, so a pass here means the
 // real firmware's wiring is right too).
 //
@@ -18,7 +19,17 @@
 #include <ESP32Encoder.h>
 #include "AudioOutputI2S.h"
 
-// Same pins as holder/config.h for the HUZZAH32.
+// Same pins as holder/config.h.
+#if defined(CONFIG_IDF_TARGET_ESP32S2)        // Adafruit ESP32-S2 Feather
+#define PIN_ENC_A     5     // "5"
+#define PIN_ENC_B     9     // "9"
+#define PIN_BUTTON    11    // "11"
+#define PIN_I2S_BCLK  18    // "A0"
+#define PIN_I2S_LRC   17    // "A1"
+#define PIN_I2S_DIN   16    // "A2"
+#define PIN_AMP_SD    15    // "A3"
+#define PIN_LED       8     // "A5"
+#else                                         // Adafruit HUZZAH32 (ESP32)
 #define PIN_ENC_A     32
 #define PIN_ENC_B     33
 #define PIN_BUTTON    27
@@ -27,6 +38,7 @@
 #define PIN_I2S_DIN   4
 #define PIN_AMP_SD    18
 #define PIN_LED       21
+#endif
 #define MM_PER_COUNT  0.687f   // rough; calibrate in the real firmware
 
 static ESP32Encoder     enc;
@@ -52,7 +64,8 @@ static void silence_ms(int ms) {
 void setup() {
   Serial.begin(115200);
   delay(300);
-  Serial.println("\n=== holder bring-up (HUZZAH32) ===");
+  delay(1500);   // native USB: give the Serial Monitor time to attach
+  Serial.println("\n=== holder bring-up ===");
 
   // 1. LED
   ledcAttach(PIN_LED, 5000, 8);
@@ -81,7 +94,7 @@ void setup() {
   Serial.println("[2] Speaker: chime...");
   tone_ms(660, 180); silence_ms(40); tone_ms(880, 260);
   silence_ms(100);
-  Serial.println("    -> heard it? If not: VIN on the Feather's USB pin (5 V), BCLK/LRC/DIN order, SD to pin MO.");
+  Serial.println("    -> heard it? If not: VIN on the Feather's USB pin (5 V), BCLK/LRC/DIN order, SD wiring (see schematic).");
 
   // 3. Encoder
   ESP32Encoder::useInternalWeakPullResistors = puType::up;

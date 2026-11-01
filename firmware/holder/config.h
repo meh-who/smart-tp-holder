@@ -28,7 +28,20 @@
 
 // ---- Pins -------------------------------------------------------------------
 // Picked automatically from the board you select in the Arduino IDE.
-#if defined(CONFIG_IDF_TARGET_ESP32)
+#if defined(CONFIG_IDF_TARGET_ESP32S2)
+// Adafruit ESP32-S2 Feather. Labels as printed on the board (GPIO in brackets).
+//   Avoid 0 (BOOT button), 7 (I2C/STEMMA power), 13 (red LED), 21 and 33
+//   (onboard NeoPixel power and data). Everything used here is a plain GPIO.
+#define PIN_ENC_A     5     // "5"   scroll-wheel encoder A
+#define PIN_ENC_B     9     // "9"   scroll-wheel encoder B
+#define PIN_BUTTON    11    // "11"  momentary to GND: short = repeat last, hold = new roll
+#define PIN_I2S_BCLK  18    // "A0"  MAX98357A BCLK
+#define PIN_I2S_LRC   17    // "A1"  MAX98357A LRC
+#define PIN_I2S_DIN   16    // "A2"  MAX98357A DIN
+#define PIN_AMP_SD    15    // "A3"  MAX98357A SD: high = on, low = shutdown
+#define PIN_LED       8     // "A5"  status LED through 330 Ω to GND (PWM via LEDC)
+#define PIN_VBAT      -1    // battery gauge is a MAX17048 on I2C; not used on mains
+#elif defined(CONFIG_IDF_TARGET_ESP32)
 // Adafruit HUZZAH32 – ESP32 Feather (original ESP32). Labels as printed on the board.
 //   Avoid 12 (boot strap, pull-down), 0/2/5/15 (strapping), 34–39 (input only),
 //   13 (drives the onboard red LED). 32/33 have internal pull-ups and can wake the chip.
@@ -70,4 +83,4 @@
 #define GAIN_DB          0.0f    // software trim. Hardware: GAIN open = 9 dB, GAIN to GND = 12 dB
 
 // ---- Firmware -----------------------------------------------------------------
-#define FW_VERSION "2.1-huzzah32"
+#define FW_VERSION "2.1"

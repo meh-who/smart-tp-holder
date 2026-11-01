@@ -1,5 +1,5 @@
 // holder.ino — (S)wipable, Scrollable, Flushable: firmware for the toilet-roll
-// holder. Adafruit HUZZAH32 (ESP32) or any ESP32-S3 board. Revision 2.1.
+// holder. Adafruit ESP32-S2 Feather (also HUZZAH32 / ESP32-S3). Revision 2.1.
 //
 // What changed from Revision C:
 //   * The holder is mains-powered in the gallery, so it stays online and asks
@@ -14,6 +14,13 @@
 //
 // Libraries (Arduino Library Manager): ESP32Encoder, ESP8266Audio, ArduinoJson 7.
 // Boards Manager: "esp32" by Espressif, 3.x.
+//
+// Adafruit ESP32-S2 Feather (single core, native USB-C, 4 MB flash, 2 MB PSRAM):
+//   Board: "Adafruit Feather ESP32-S2"  (or "ESP32S2 Dev Module")
+//   USB CDC On Boot: Enabled   (otherwise Serial Monitor shows nothing)
+//   Partition Scheme: "No OTA (2MB APP/2MB SPIFFS)"
+//   First upload only: hold BOOT, tap RESET, release BOOT, then Upload; tap RESET
+//   when it finishes. After that, uploads work without the buttons.
 //
 // Adafruit HUZZAH32 (original ESP32, 4 MB flash, no PSRAM):
 //   Board: "Adafruit ESP32 Feather"  (or "ESP32 Dev Module")
