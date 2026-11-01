@@ -1,5 +1,5 @@
 // holder.ino — (S)wipable, Scrollable, Flushable: firmware for the toilet-roll
-// holder, ESP32-S3, revision 2.0 "nfc".
+// holder. Adafruit HUZZAH32 (ESP32) or any ESP32-S3 board. Revision 2.1.
 //
 // What changed from Revision C:
 //   * The holder is mains-powered in the gallery, so it stays online and asks
@@ -13,9 +13,15 @@
 //     the companion page, steady when online with a feed (led.h).
 //
 // Libraries (Arduino Library Manager): ESP32Encoder, ESP8266Audio, ArduinoJson 7.
-// Board: "ESP32S3 Dev Module" (or your Feather/XIAO), partition scheme with a
-// LittleFS partition of at least 4 MB ("16M Flash (3MB APP/9.9MB FATFS)" is
-// fine on a 16 MB board — select "LittleFS" if your core offers it), USB CDC on boot.
+// Boards Manager: "esp32" by Espressif, 3.x.
+//
+// Adafruit HUZZAH32 (original ESP32, 4 MB flash, no PSRAM):
+//   Board: "Adafruit ESP32 Feather"  (or "ESP32 Dev Module")
+//   Partition Scheme: "No OTA (2MB APP/2MB SPIFFS)"   <- needed: the default leaves
+//   too little room for the clips. The sketch formats that partition as LittleFS.
+//   Upload Speed 921600; the board auto-resets into the bootloader over USB.
+// ESP32-S3 boards: "ESP32S3 Dev Module", USB CDC On Boot: Enabled, a partition
+//   scheme with >= 2 MB for the filesystem.
 //
 // Serial console (115200):  cal <mm>   calibrate after pulling exactly <mm> of paper
 //                           newroll    reset the roll counter
