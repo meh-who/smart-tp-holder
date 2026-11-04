@@ -1,18 +1,24 @@
 // config.h — everything you edit before flashing lives here.
 #pragma once
 
+// ---- Secrets ----------------------------------------------------------------
+// Wi-fi name/password and the holder key live in secrets.h, next to this file.
+// secrets.h is listed in .gitignore so it never reaches GitHub; copy
+// secrets.example.h to secrets.h if you are starting from a fresh clone.
+#if __has_include("secrets.h")
+#include "secrets.h"
+#else
+#error "Missing secrets.h - copy secrets.example.h to secrets.h and fill in your wi-fi."
+#endif
+
 // ---- Identity ---------------------------------------------------------------
 // HOLDER_ID is the last path segment of the URL written to the NFC tag:
-//     https://<your server>/r/<HOLDER_ID>
-// HOLDER_KEY is a shared secret the server checks on every holder request.
-// Register both on the server:  python manage.py add-holder <id> <key>
+//     https://smart-tp-holder-production.up.railway.app/r/lisbon-01
+// It must match the id in the server's HOLDERS variable on Railway.
 #define HOLDER_ID   "lisbon-01"
-#define HOLDER_KEY  "change-me-to-a-long-random-string"
 
 // ---- Network ---------------------------------------------------------------
-#define WIFI_SSID   "your-wifi"
-#define WIFI_PASS   "your-password"
-#define SERVER_URL  "https://holder.example.org"   // no trailing slash
+#define SERVER_URL  "https://smart-tp-holder-production.up.railway.app"   // no trailing slash
 // For a self-signed or unknown CA on the venue network, set INSECURE_TLS 1
 // (the holder plays whatever the server sends; this is a gallery, not a bank).
 #define INSECURE_TLS 1

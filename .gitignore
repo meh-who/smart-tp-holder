@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 firmware/test/motion_test
 .DS_Store
+firmware/holder/secrets.h
