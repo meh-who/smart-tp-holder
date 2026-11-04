@@ -2,115 +2,121 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f4efe6">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#b9b8b4">
 <title>The roll</title>
 <style>
   :root {
-    --bg: #f4efe6; --paper: #fffdf8; --ink: #1d1a16; --muted: #6f675c; --line: #e3dccd;
-    --accent: #c8522b; --ok: #2f7d4f; --warn: #b7791f; --off: #9a9289;
-    --radius: 18px; --pad: 18px;
+    --bg: #b9b8b4;          /* the wall */
+    --disc: #d4d3cf;        /* the roll, end-on */
+    --ink: #111110;
+    --muted: #8e8d89;
+    --faint: #a3a29e;
+    --sheet: #c6c5c1;
+    --ok: #2f7d4f;
+    --off: #8e8d89;
+    --warn: #8a5a12;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #15130f; --paper: #1f1b16; --ink: #f2ece1; --muted: #a79d8f; --line: #342e26; --off: #6d6559; }
+    :root { --bg: #232322; --disc: #343432; --ink: #f2f1ee; --muted: #8b8a86; --faint: #6f6e6a; --sheet: #2c2c2a; --ok: #6fc28f; --off: #6f6e6a; --warn: #e2b46a; }
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink);
-    font: 16px/1.45 ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased; }
-  main { max-width: 520px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px 48px; }
-  h1 { font-size: 1.05rem; font-weight: 600; letter-spacing: .01em; margin: 6px 0 2px; }
-  .sub { color: var(--muted); font-size: .9rem; margin: 0 0 18px; }
-  .card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: var(--pad); margin-bottom: 14px; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 16px/1.35 "Inter", ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; overflow: hidden; overscroll-behavior: none; }
+  .app { position: relative; height: 100dvh; max-width: 520px; margin: 0 auto; display: grid;
+    grid-template-rows: auto 1fr auto auto; padding-top: env(safe-area-inset-top); }
 
-  /* status */
-  .status { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
-  .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--off); box-shadow: 0 0 0 4px color-mix(in srgb, var(--off) 20%, transparent); }
-  .dot.on { background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 20%, transparent); animation: pulse 2.4s ease-in-out infinite; }
-  @keyframes pulse { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--ok) 8%, transparent); } }
-  .status b { font-weight: 600; display: block; }
-  .status span { color: var(--muted); font-size: .9rem; }
-  .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
-  .meta div { border-top: 1px solid var(--line); padding-top: 10px; }
-  .meta small { color: var(--muted); display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
-  .meta strong { font-weight: 600; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+  /* top line */
+  .top { display: flex; align-items: center; gap: 10px; padding: 16px 22px 0; z-index: 2; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--off); flex: none; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); animation: ping 2.4s ease-out infinite; }
+  @keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 70%,100% { box-shadow: 0 0 0 10px transparent; } }
+  .top b { font-weight: 600; font-size: 15px; letter-spacing: .01em; }
+  .top span { color: var(--muted); font-size: 14px; }
 
-  /* roll gauge: a shrinking roll, seen end-on */
-  .roll { display: flex; align-items: center; gap: 14px; margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
-  .roll svg { width: 64px; height: 64px; flex: none; }
-  .roll p { margin: 0; font-size: .92rem; }
-  .roll p span { color: var(--muted); display: block; font-size: .82rem; }
+  /* the wheel */
+  .stage { position: relative; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  .stage:active { cursor: grabbing; }
+  .disc { position: absolute; border-radius: 50%; background: var(--disc); transition: background .4s; }
+  .num { position: absolute; left: 0; top: 0; will-change: transform, opacity;
+    font-weight: 400; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1; }
+  .unit { position: absolute; color: var(--muted); font-size: 13px; letter-spacing: .02em; text-align: right; line-height: 1.3; }
+  .unit b { display: block; color: var(--ink); font-weight: 600; font-size: 15px; letter-spacing: 0; }
 
-  /* now reading */
-  .reading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-  .reading .label { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
-  .reading .src { font-size: 1.35rem; font-weight: 600; }
-  .pending { color: var(--warn); font-size: .88rem; margin-top: 6px; }
+  /* bottom options */
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); padding: 6px 12px 14px; z-index: 2; }
+  .opt { appearance: none; border: 0; background: none; color: inherit; font: inherit; padding: 10px 4px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; border-radius: 14px; }
+  .opt:active { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .opt svg { width: 24px; height: 24px; stroke: var(--ink); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .opt b { font-size: 17px; font-weight: 600; }
+  .opt small { font-size: 13px; color: var(--muted); max-width: 13ch; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .opt small.warn { color: var(--warn); }
 
-  /* services */
-  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 10px 4px; font-weight: 600; }
-  .svc { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
-  .svc:first-of-type { border-top: 0; padding-top: 2px; }
-  .svc:last-of-type { padding-bottom: 2px; }
-  .svc .name { font-weight: 600; }
-  .svc .acct { color: var(--muted); font-size: .85rem; }
-  .svc .note { grid-column: 1 / -1; color: var(--muted); font-size: .82rem; margin: -4px 0 0; }
-  .btn { appearance: none; border: 1px solid var(--line); background: var(--paper); color: var(--ink);
-    border-radius: 999px; padding: 9px 16px; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
-  .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-  .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn:disabled { opacity: .45; cursor: default; }
-  .btn.link { border: 0; padding: 6px 0; color: var(--muted); font-weight: 500; }
-  .actions { display: flex; gap: 8px; align-items: center; }
+  /* footer */
+  .foot { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; padding: 6px 18px calc(18px + env(safe-area-inset-bottom)); z-index: 2; }
+  .x, .ok { appearance: none; border: 0; cursor: pointer; display: grid; place-items: center; transition: opacity .25s, transform .25s; }
+  .x { width: 44px; height: 44px; background: none; color: var(--ink); }
+  .x svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+  .ok { width: 60px; height: 60px; border-radius: 50%; background: var(--ink); color: var(--bg); justify-self: end; }
+  .ok svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .ok:disabled { opacity: .35; cursor: default; }
+  .hide { opacity: 0; pointer-events: none; transform: scale(.85); }
+  .label { text-align: center; color: var(--muted); font-size: 16px; }
 
-  .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
-    background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: .9rem; opacity: 0; transition: .25s; pointer-events: none; max-width: 90vw; }
-  .toast.show { opacity: 1; transform: translateX(-50%); }
-  footer { color: var(--muted); font-size: .78rem; text-align: center; margin-top: 26px; line-height: 1.5; }
+  /* feed chooser: slides up over the options row */
+  .sheet { position: absolute; left: 0; right: 0; bottom: calc(84px + env(safe-area-inset-bottom)); padding: 8px 18px 4px; z-index: 3;
+    background: var(--bg); transform: translateY(16px); opacity: 0; pointer-events: none; transition: transform .3s cubic-bezier(.2,.8,.2,1), opacity .25s; }
+  .sheet.open { transform: none; opacity: 1; pointer-events: auto; }
+  .choice { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; width: 100%; text-align: left;
+    appearance: none; border: 0; background: none; color: inherit; font: inherit; padding: 13px 4px; border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); cursor: pointer; }
+  .choice:first-child { border-top: 0; }
+  .choice b { font-size: 17px; font-weight: 600; }
+  .choice small { grid-column: 1; color: var(--muted); font-size: 13px; }
+  .choice .radio { grid-row: 1 / span 2; grid-column: 2; width: 22px; height: 22px; border-radius: 50%; border: 1.6px solid var(--muted); }
+  .choice[aria-checked="true"] .radio { border: 7px solid var(--ink); }
+  .choice[disabled] { opacity: .45; cursor: default; }
+  .choice .link { grid-column: 1; justify-self: start; font-size: 13px; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; padding: 0; background: none; border: 0; font: inherit; font-size: 13px; cursor: pointer; }
+
+  .toast { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translate(-50%, -10px); opacity: 0;
+    background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-size: 14px; transition: .25s; pointer-events: none; z-index: 9; max-width: 90vw; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { .dot.on { animation: none; } }
 </style>
 </head>
 <body>
-<main>
-  <h1>The roll</h1>
-  <p class="sub" id="holderName">Connecting…</p>
+<div class="app">
+  <div class="top"><div class="dot" id="dot"></div><b id="name">The roll</b><span id="seen">connecting…</span></div>
 
-  <section class="card">
-    <div class="status">
-      <div class="dot" id="dot"></div>
-      <div><b id="stateLine">Looking for the holder</b><span id="stateSub">This takes a moment.</span></div>
-    </div>
-    <div class="meta">
-      <div><small>Last pull</small><strong id="lastPull">—</strong></div>
-      <div><small>Cached</small><strong id="cached">—</strong></div>
-      <div><small>Queue</small><strong id="queue">—</strong></div>
-    </div>
-    <div class="roll">
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="32" cy="32" r="30" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 3"/>
-        <circle id="rollOuter" cx="32" cy="32" r="30" fill="var(--bg)" stroke="var(--ink)" stroke-width="1.5"/>
-        <circle cx="32" cy="32" r="11" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5"/>
-      </svg>
-      <p><b id="sheetsLeft">—</b> sheets left<span id="sheetsNote">on this roll</span></p>
-    </div>
-  </section>
+  <div class="stage" id="stage" aria-label="Sheets left on the roll">
+    <div class="disc" id="disc"></div>
+    <div class="unit" id="unit"><b>sheets</b>left</div>
+  </div>
 
-  <section class="card">
-    <div class="reading">
-      <div><div class="label">Now reading</div><div class="src" id="nowReading">—</div></div>
-      <div class="actions"><button class="btn link" id="refreshBtn" type="button">Refresh</button></div>
-    </div>
-    <div class="pending" id="pending" hidden></div>
-  </section>
+  <div class="row" id="row">
+    <button class="opt" id="optFeed" type="button" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24"><path d="M5 19a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"/><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/></svg>
+      <b>Feed</b><small id="feedSub">—</small>
+    </button>
+    <button class="opt" id="optStatus" type="button">
+      <svg viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16a5 5 0 0 1 7 0"/><path d="M12 19.5h.01"/></svg>
+      <b>Status</b><small id="statusSub">—</small>
+    </button>
+    <button class="opt" id="optPull" type="button">
+      <svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+      <b>Last pull</b><small id="pullSub">—</small>
+    </button>
+  </div>
 
-  <h2>Choose what the roll reads</h2>
-  <section class="card" id="services"></section>
+  <div class="sheet" id="sheet" role="dialog" aria-label="Choose feed"></div>
 
-  <footer>
-    One item per sheet. Pulled paper is not taken away.<br>
-    Choosing a service connects it to this holder only, until the end of the day.
-  </footer>
-</main>
+  <div class="foot">
+    <button class="x hide" id="xBtn" type="button" aria-label="Cancel"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="label" id="footLabel">Pull a sheet</div>
+    <button class="ok hide" id="okBtn" type="button" aria-label="Read this feed"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -118,122 +124,199 @@
   const HOLDER = "__HOLDER_ID__";
   const api = p => `/api/holder/${encodeURIComponent(HOLDER)}${p}`;
   const $ = id => document.getElementById(id);
-  let state = null, timer = null, busy = false;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let state = null, chooserOpen = false, picked = null;
 
-  const fmtAgo = s => s == null ? "—" : s < 5 ? "just now" : s < 60 ? `${s} s ago` : s < 3600 ? `${Math.round(s/60)} min ago` : `${Math.round(s/3600)} h ago`;
+  // ---------------------------------------------------------------- wheel ---
+  // The half-disc is the roll seen end-on; the numbers are sheets left. The
+  // wheel eases toward the real count (target), can be flicked by hand, and
+  // springs back. A pull on the holder makes it roll forward.
+  const stage = $("stage"), disc = $("disc"), unit = $("unit");
+  const SPAN = 7;                       // numbers drawn either side of centre
+  const nodes = [];
+  for (let i = 0; i < SPAN * 2 + 1; i++) { const n = document.createElement("div"); n.className = "num"; stage.appendChild(n); nodes.push(n); }
+  let G = null;                         // geometry
+  let value = 200, target = 200, vel = 0, maxSheets = 200;
+  let dragging = false, dragY = 0, dragV = 0, lastMove = 0, lastInteract = performance.now();
 
-  function toast(msg) {
-    const t = $("toast"); t.textContent = msg; t.classList.add("show");
-    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600);
+  function layout() {
+    const W = stage.clientWidth, H = stage.clientHeight;
+    const R = Math.min(W * 0.70, H * 0.56);
+    const cx = W * 0.48 + R, cy = H * 0.50;
+    const big = Math.max(46, Math.min(92, R * 0.22));            // centre number size
+    const rt = R - big * 0.95;          // radius the numbers ride on
+    const step = Math.asin(Math.min(0.9, big * 1.22 / rt));      // angle between numbers
+    G = { W, H, R, cx, cy, big, rt, step };
+    Object.assign(disc.style, { width: `${2 * R}px`, height: `${2 * R}px`, left: `${cx - R}px`, top: `${cy - R}px` });
+    Object.assign(unit.style, { right: `${W - (cx - R) + 14}px`, top: `${cy - 18}px` });
   }
 
+  function mix(a, b, t) { return `color-mix(in srgb, ${a} ${Math.round((1 - t) * 100)}%, ${b})`; }
+
+  function draw() {
+    if (!G) return;
+    const base = Math.round(value);
+    for (let i = 0; i < nodes.length; i++) {
+      const n = base - SPAN + i;           // higher numbers above: the roll unwinds downward
+      const d = value - n;                 // signed distance from centre, in sheets
+      const el = nodes[i];
+      if (n < 0 || n > maxSheets || Math.abs(d) > 3.6) { el.style.opacity = 0; continue; }
+      const a = d * G.step * (1 - 0.045 * Math.min(Math.abs(d), 6));   // larger n above centre; outer ones pack tighter, like a drum turning away
+      const x = G.cx - G.rt * Math.cos(a);
+      const y = G.cy + G.rt * Math.sin(a);
+      const ad = Math.abs(d);
+      const s = Math.max(0.42, 1 - 0.13 * ad);
+      const o = Math.max(0, 1 - 0.15 * ad);
+      el.textContent = n;
+      el.style.fontSize = `${G.big}px`;
+      el.style.fontWeight = ad < 0.5 ? 500 : 400;
+      el.style.color = mix("var(--ink)", "var(--faint)", Math.min(1, ad / 3.2));
+      el.style.opacity = o;
+      el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${s})`;
+    }
+  }
+
+  function tick(now) {
+    if (!dragging) {
+      // critically-damped spring toward the target
+      const k = reduce ? 1 : 0.085, damp = 0.78;
+      vel = (vel + (target - value) * k) * damp;
+      value += vel;
+      if (Math.abs(target - value) < 0.002 && Math.abs(vel) < 0.002) { value = target; vel = 0; }
+      // idle hint: every ~7 s of stillness, a small scroll that springs back
+      if (!reduce && now - lastInteract > 7000 && Math.abs(vel) < 0.001) { vel = -0.09; lastInteract = now; }
+    }
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // drag / flick / mouse wheel
+  const sheetsPerPx = () => 1 / (G.big * 1.05);
+  stage.addEventListener("pointerdown", e => { dragging = true; dragY = e.clientY; dragV = 0; lastMove = performance.now(); stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    const now = performance.now(), dy = e.clientY - dragY;
+    value = Math.max(0, Math.min(maxSheets, value + dy * sheetsPerPx()));   // drag down = roll back
+    dragV = (dy * sheetsPerPx()) / Math.max(1, now - lastMove) * 16; dragY = e.clientY; lastMove = now; lastInteract = now;
+  });
+  const release = () => { if (!dragging) return; dragging = false; vel = dragV; lastInteract = performance.now(); };
+  stage.addEventListener("pointerup", release); stage.addEventListener("pointercancel", release);
+  stage.addEventListener("wheel", e => { e.preventDefault(); vel -= e.deltaY * 0.0016; lastInteract = performance.now(); }, { passive: false });
+
+  new ResizeObserver(() => { layout(); draw(); }).observe(stage);
+  layout(); requestAnimationFrame(tick);
+
+  // ------------------------------------------------------------- data ---
+  const fmtAgo = s => s == null ? "never" : s < 5 ? "just now" : s < 60 ? `${s} s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`;
+  const labelOf = (s, id) => (s.services.find(x => x.id === id) || {}).label || id;
+
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600); }
+
+  let firstData = true;
   function render(s) {
     state = s;
-    $("holderName").textContent = s.holder.name ? `Holder “${s.holder.name}”` : `Holder ${s.holder.id}`;
-    const dot = $("dot");
-    dot.classList.toggle("on", s.online);
-    if (s.online) {
-      $("stateLine").textContent = s.playing ? "Online — speaking" : "Online";
-      $("stateSub").textContent = `Checked in ${fmtAgo(s.last_seen_s)} · wi-fi ${s.rssi ?? "?"} dBm · fw ${s.fw ?? "?"}`;
-    } else if (s.last_seen_s != null) {
-      $("stateLine").textContent = "Offline";
-      $("stateSub").textContent = `Last seen ${fmtAgo(s.last_seen_s)}. It keeps reading what it has cached.`;
-    } else {
-      $("stateLine").textContent = "Not heard from yet";
-      $("stateSub").textContent = "Power it on and give it a minute.";
-    }
-    $("lastPull").textContent = fmtAgo(s.last_pull_s);
-    $("cached").textContent = s.bulletin.items ? `${s.bulletin.items} items` : "—";
-    $("queue").textContent = s.queued ?? "—";
+    $("name").textContent = s.holder.name || s.holder.id;
+    $("dot").classList.toggle("on", !!s.online);
+    $("seen").textContent = s.online ? (s.playing ? "speaking" : "online") : (s.last_seen_s == null ? "not heard from yet" : `offline · seen ${fmtAgo(s.last_seen_s)}`);
 
-    const used = s.sheets_this_roll ?? 0, total = s.roll_sheets || 200;
-    const left = Math.max(0, total - used);
-    $("sheetsLeft").textContent = s.sheets_this_roll == null ? "—" : left;
-    // Area of paper is proportional to sheets left: r² scales linearly between core (11) and full (30).
-    const frac = Math.max(0, Math.min(1, left / total));
-    const r = Math.sqrt(11*11 + frac * (30*30 - 11*11));
-    $("rollOuter").setAttribute("r", r.toFixed(1));
-    $("sheetsNote").textContent = left <= 12 ? "nearly out — ask for a new roll" : "on this roll";
+    // wheel target: sheets left on this roll
+    maxSheets = s.roll_sheets || 200;
+    const left = s.sheets_this_roll == null ? maxSheets : Math.max(0, maxSheets - s.sheets_this_roll);
+    if (firstData) { value = Math.min(maxSheets, left + 14); vel = 0; firstData = false; }   // open with a roll down to the real count
+    target = left;
 
-    const labels = Object.fromEntries(s.services.map(x => [x.id, x.label]));
-    const actual = s.holder_source || s.built_source;
-    $("nowReading").textContent = actual ? labels[actual] || actual : "—";
+    // row
+    const actual = s.holder_source || s.built_source || s.desired_source;
+    const fs = $("feedSub");
+    if (s.bulletin.status === "building") { fs.textContent = `preparing ${labelOf(s, s.desired_source)}…`; fs.className = "warn"; }
+    else if (s.bulletin.status === "error") { fs.textContent = "couldn't load"; fs.className = "warn"; }
+    else if (s.desired_source !== actual && s.online) { fs.textContent = `switching…`; fs.className = "warn"; }
+    else { fs.textContent = labelOf(s, actual); fs.className = ""; }
+    $("statusSub").textContent = s.online ? (s.playing ? "speaking" : "online") : "offline";
+    $("pullSub").textContent = s.last_pull_s == null ? "no pulls yet" : fmtAgo(s.last_pull_s);
+    $("footLabel").textContent = chooserOpen ? "Choose feed" : (left <= 12 ? "Nearly out — new roll soon" : "Pull a sheet");
 
-    const p = $("pending");
-    if (s.desired_source !== actual || s.bulletin.status === "building") {
-      p.hidden = false;
-      if (s.bulletin.status === "building") p.textContent = `Preparing ${labels[s.desired_source]}… the holder switches within ${s.poll_s} s of it being ready.`;
-      else if (s.bulletin.status === "error") p.textContent = `Could not build ${labels[s.desired_source]}: ${s.bulletin.error || "unknown error"}. Still reading ${labels[actual] || "the previous source"}.`;
-      else if (!s.online) p.textContent = `Switched to ${labels[s.desired_source]}. The holder will pick it up when it is back online.`;
-      else p.textContent = `Switching to ${labels[s.desired_source]}…`;
-    } else p.hidden = true;
-
-    const box = $("services"); box.innerHTML = "";
-    for (const svc of s.services) {
-      const row = document.createElement("div"); row.className = "svc";
-      const isDesired = s.desired_source === svc.id;
-      const left = document.createElement("div");
-      left.innerHTML = `<div class="name">${svc.label}</div><div class="acct">${
-        !svc.configured && svc.id !== "news" ? "Not set up on this server" :
-        svc.id === "news" ? "Always available" :
-        svc.connected ? (svc.account ? `Connected as ${svc.account}` : "Connected") : "Not connected"}</div>`;
-      const right = document.createElement("div"); right.className = "actions";
-      if (svc.connected) {
-        const use = document.createElement("button"); use.type = "button";
-        use.className = "btn" + (isDesired ? " active" : " primary");
-        use.textContent = isDesired ? "Reading" : "Read this";
-        use.disabled = isDesired || busy;
-        use.onclick = () => setSource(svc.id);
-        right.appendChild(use);
-        if (svc.id !== "news") {
-          const dis = document.createElement("button"); dis.type = "button"; dis.className = "btn link"; dis.textContent = "Disconnect";
-          dis.onclick = () => disconnect(svc.id);
-          right.appendChild(dis);
-        }
-      } else {
-        const con = document.createElement("button"); con.type = "button"; con.className = "btn";
-        con.textContent = "Connect"; con.disabled = !svc.configured;
-        con.onclick = () => { location.href = `/auth/${svc.id}/start?holder=${encodeURIComponent(HOLDER)}`; };
-        right.appendChild(con);
-      }
-      row.appendChild(left); row.appendChild(right);
-      const note = document.createElement("p"); note.className = "note"; note.textContent = svc.note; row.appendChild(note);
-      box.appendChild(row);
-    }
+    if (chooserOpen) buildChooser();
   }
 
   async function refresh() {
     try {
-      const r = await fetch(api("/status"), {cache: "no-store"});
-      if (!r.ok) throw new Error(r.status === 403 ? "Open this page by tapping the holder." : `HTTP ${r.status}`);
+      const r = await fetch(api("/status"), { cache: "no-store" });
+      if (!r.ok) throw new Error(r.status === 403 ? "Tap the holder with your phone to open this page." : `HTTP ${r.status}`);
       render(await r.json());
-    } catch (e) {
-      $("stateLine").textContent = "Can't reach the server"; $("stateSub").textContent = e.message;
-    }
+    } catch (e) { $("seen").textContent = e.message; }
   }
 
-  async function setSource(id) {
-    busy = true;
+  // ---------------------------------------------------------- chooser ---
+  function buildChooser() {
+    const s = state; if (!s) return;
+    const box = $("sheet"); box.innerHTML = "";
+    if (picked == null) picked = s.desired_source;
+    for (const svc of s.services) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "choice"; b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(picked === svc.id));
+      const usable = svc.id === "news" || svc.configured;
+      if (!usable) b.disabled = true;
+      const sub = svc.id === "news" ? "Public headlines · no login"
+        : !svc.configured ? "Not set up on this server"
+        : svc.connected ? (svc.account ? `Connected as ${svc.account}` : "Connected")
+        : "Tap ✓ to log in";
+      b.innerHTML = `<b>${svc.label}</b><span class="radio"></span><small>${sub}</small>`;
+      if (svc.connected && svc.id !== "news" && svc.account !== "curated set") {
+        const l = document.createElement("span"); l.className = "link"; l.textContent = "Disconnect"; l.setAttribute("role", "button");
+        l.onclick = ev => { ev.stopPropagation(); disconnect(svc.id); };
+        b.appendChild(l);
+      }
+      b.onclick = () => { picked = svc.id; buildChooser(); };
+      box.appendChild(b);
+    }
+    $("okBtn").disabled = !picked || (picked === s.desired_source && picked === (s.holder_source || s.built_source));
+  }
+
+  function openChooser() {
+    if (!state) return;
+    chooserOpen = true; picked = null; buildChooser();
+    $("sheet").classList.add("open"); $("row").style.visibility = "hidden";
+    $("xBtn").classList.remove("hide"); $("okBtn").classList.remove("hide"); $("footLabel").textContent = "Choose feed";
+  }
+  function closeChooser() {
+    chooserOpen = false;
+    $("sheet").classList.remove("open"); $("row").style.visibility = "";
+    $("xBtn").classList.add("hide"); $("okBtn").classList.add("hide");
+    if (state) render(state);
+  }
+
+  async function confirmChoice() {
+    const s = state, svc = s.services.find(x => x.id === picked);
+    if (!svc) return;
+    if (svc.id !== "news" && !svc.connected) { location.href = `/auth/${svc.id}/start?holder=${encodeURIComponent(HOLDER)}`; return; }
     try {
-      const r = await fetch(api("/source"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({source: id})});
+      const r = await fetch(api("/source"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: svc.id }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.detail || `HTTP ${r.status}`);
-      toast(`Preparing ${id === "news" ? "the news" : id}…`);
+      toast(`Preparing ${svc.label}…`);
+      vel = -0.6;                          // a little roll to mark the change
     } catch (e) { toast(e.message); }
-    busy = false; refresh();
+    closeChooser(); refresh();
   }
 
   async function disconnect(id) {
-    if (!confirm(`Disconnect ${id} from this holder?`)) return;
-    await fetch(api("/disconnect"), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({provider: id})});
+    if (!confirm(`Disconnect ${labelOf(state, id)} from this holder?`)) return;
+    await fetch(api("/disconnect"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ provider: id }) });
     refresh();
   }
 
-  $("refreshBtn").onclick = refresh;
+  $("optFeed").onclick = openChooser;
+  $("optStatus").onclick = () => { refresh(); toast(state && state.online ? `Online · checked in ${fmtAgo(state.last_seen_s)}` : "The holder isn't connected right now"); };
+  $("optPull").onclick = () => { vel = -0.8; lastInteract = performance.now(); };
+  $("xBtn").onclick = closeChooser;
+  $("okBtn").onclick = confirmChoice;
+
   const q = new URLSearchParams(location.search);
   if (q.get("connected")) { toast(`${q.get("connected")} connected`); history.replaceState(null, "", location.pathname); }
   refresh();
-  timer = setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 5000);
+  setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 5000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
 })();
 </script>
