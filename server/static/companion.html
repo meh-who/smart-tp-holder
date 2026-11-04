@@ -9,6 +9,7 @@
   :root {
     --bg: #b9b8b4;          /* the wall */
     --disc: #d4d3cf;        /* the roll, end-on */
+    --core: #bcb7ad;        /* the cardboard core */
     --ink: #111110;
     --muted: #8e8d89;
     --faint: #a3a29e;
@@ -18,7 +19,7 @@
     --warn: #8a5a12;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #232322; --disc: #343432; --ink: #f2f1ee; --muted: #8b8a86; --faint: #6f6e6a; --sheet: #2c2c2a; --ok: #6fc28f; --off: #6f6e6a; --warn: #e2b46a; }
+    :root { --bg: #232322; --disc: #343432; --core: #575653; --ink: #f2f1ee; --muted: #8b8a86; --faint: #6f6e6a; --sheet: #2c2c2a; --ok: #6fc28f; --off: #6f6e6a; --warn: #e2b46a; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
@@ -39,6 +40,7 @@
   .stage { position: relative; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
   .stage:active { cursor: grabbing; }
   .disc { position: absolute; border-radius: 50%; background: var(--disc); transition: background .4s; }
+  .core { position: absolute; border-radius: 50%; background: var(--core); box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--core) 80%, var(--ink) 8%); }
   .num { position: absolute; left: 0; top: 0; will-change: transform, opacity;
     font-weight: 400; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1; }
   .unit { position: absolute; color: var(--muted); font-size: 13px; letter-spacing: .02em; text-align: right; line-height: 1.3; }
@@ -94,6 +96,7 @@
 
   <div class="stage" id="stage" aria-label="Sheets left on the roll">
     <div class="disc" id="disc"></div>
+    <div class="core" id="core"></div>
     <div class="unit" id="unit"><b>sheets</b>pulled</div>
   </div>
 
@@ -134,7 +137,7 @@
   // The half-disc is the roll seen end-on; the numbers count sheets pulled from
   // this roll, from 0. The wheel eases toward the real count, can be flicked by
   // hand and springs back. Each pull scrolls the next number up from below.
-  const stage = $("stage"), disc = $("disc"), unit = $("unit");
+  const stage = $("stage"), disc = $("disc"), core = $("core"), unit = $("unit");
   const SPAN = 7;                       // numbers drawn either side of centre
   const nodes = [];
   for (let i = 0; i < SPAN * 2 + 1; i++) { const n = document.createElement("div"); n.className = "num"; stage.appendChild(n); nodes.push(n); }
@@ -151,6 +154,8 @@
     const step = Math.asin(Math.min(0.9, big * 1.22 / rt));      // angle between numbers
     G = { W, H, R, cx, cy, big, rt, step };
     Object.assign(disc.style, { width: `${2 * R}px`, height: `${2 * R}px`, left: `${cx - R}px`, top: `${cy - R}px` });
+    const Rc = R * 0.40;                // a real roll: ~44 mm core in a ~110 mm roll
+    Object.assign(core.style, { width: `${2 * Rc}px`, height: `${2 * Rc}px`, left: `${cx - Rc}px`, top: `${cy - Rc}px` });
     Object.assign(unit.style, { right: `${W - (cx - R) + 14}px`, top: `${cy - 18}px` });
   }
 
@@ -230,7 +235,7 @@
     // row
     const actual = s.holder_source || s.built_source || s.desired_source;
     const fs = $("feedSub");
-    if (s.bulletin.status === "building") { fs.textContent = `preparing ${labelOf(s, s.desired_source)}…`; fs.className = "warn"; }
+    if (s.bulletin.status === "building") { fs.textContent = "preparing…"; fs.className = "warn"; }
     else if (s.bulletin.status === "error") { fs.textContent = "couldn't load"; fs.className = "warn"; }
     else if (s.desired_source !== actual && s.online) { fs.textContent = `switching…`; fs.className = "warn"; }
     else { fs.textContent = labelOf(s, actual); fs.className = ""; }
