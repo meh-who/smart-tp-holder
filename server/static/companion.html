@@ -166,7 +166,7 @@
     const ring = R - G.Rc;
     const big = Math.max(13, Math.min(84, ring * 0.40));      // shrinks with the paper
     const rt = Math.max(G.Rc + ring * 0.5, G.Rc + big * 0.75); // mid-ring; when the paper is thinner than a digit, stay off the core
-    const step = Math.asin(Math.min(0.55, big * 1.02 / rt));
+    const step = Math.asin(Math.min(0.9, big * 1.22 / rt));    // same spacing as the first wheel
     return { R, ring, big, rt, step };
   }
 
