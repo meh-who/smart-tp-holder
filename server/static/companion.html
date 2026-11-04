@@ -79,7 +79,10 @@
   .choice[disabled] { opacity: .45; cursor: default; }
   .choice .link { grid-column: 1; justify-self: start; font-size: 13px; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; padding: 0; background: none; border: 0; font: inherit; font-size: 13px; cursor: pointer; }
 
-  .toast { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translate(-50%, -10px); opacity: 0;
+  .confirm { padding: 14px 4px 18px; display: grid; gap: 6px; }
+  .confirm b { font-size: 19px; font-weight: 600; }
+  .confirm small { color: var(--muted); font-size: 14px; }
+  .toast { white-space: nowrap; position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translate(-50%, -10px); opacity: 0;
     background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-size: 14px; transition: .25s; pointer-events: none; z-index: 9; max-width: 90vw; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
   @media (prefers-reduced-motion: reduce) { .dot.on { animation: none; } }
@@ -91,7 +94,7 @@
 
   <div class="stage" id="stage" aria-label="Sheets left on the roll">
     <div class="disc" id="disc"></div>
-    <div class="unit" id="unit"><b>sheets</b>left</div>
+    <div class="unit" id="unit"><b>sheets</b>pulled</div>
   </div>
 
   <div class="row" id="row">
@@ -103,13 +106,13 @@
       <svg viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16a5 5 0 0 1 7 0"/><path d="M12 19.5h.01"/></svg>
       <b>Status</b><small id="statusSub">—</small>
     </button>
-    <button class="opt" id="optPull" type="button">
+    <button class="opt" id="optRoll" type="button" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
-      <b>Last pull</b><small id="pullSub">—</small>
+      <b>New roll</b><small id="rollSub">reset to 0</small>
     </button>
   </div>
 
-  <div class="sheet" id="sheet" role="dialog" aria-label="Choose feed"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-label="Choose"></div>
 
   <div class="foot">
     <button class="x hide" id="xBtn" type="button" aria-label="Cancel"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -125,18 +128,18 @@
   const api = p => `/api/holder/${encodeURIComponent(HOLDER)}${p}`;
   const $ = id => document.getElementById(id);
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let state = null, chooserOpen = false, picked = null;
+  let state = null, mode = null, picked = null;     // mode: null | "feed" | "roll"
 
   // ---------------------------------------------------------------- wheel ---
-  // The half-disc is the roll seen end-on; the numbers are sheets left. The
-  // wheel eases toward the real count (target), can be flicked by hand, and
-  // springs back. A pull on the holder makes it roll forward.
+  // The half-disc is the roll seen end-on; the numbers count sheets pulled from
+  // this roll, from 0. The wheel eases toward the real count, can be flicked by
+  // hand and springs back. Each pull scrolls the next number up from below.
   const stage = $("stage"), disc = $("disc"), unit = $("unit");
   const SPAN = 7;                       // numbers drawn either side of centre
   const nodes = [];
   for (let i = 0; i < SPAN * 2 + 1; i++) { const n = document.createElement("div"); n.className = "num"; stage.appendChild(n); nodes.push(n); }
   let G = null;                         // geometry
-  let value = 200, target = 200, vel = 0, maxSheets = 200;
+  let value = 0, target = 0, vel = 0;
   let dragging = false, dragY = 0, dragV = 0, lastMove = 0, lastInteract = performance.now();
 
   function layout() {
@@ -157,11 +160,11 @@
     if (!G) return;
     const base = Math.round(value);
     for (let i = 0; i < nodes.length; i++) {
-      const n = base - SPAN + i;           // higher numbers above: the roll unwinds downward
+      const n = base - SPAN + i;
       const d = value - n;                 // signed distance from centre, in sheets
       const el = nodes[i];
-      if (n < 0 || n > maxSheets || Math.abs(d) > 3.6) { el.style.opacity = 0; continue; }
-      const a = d * G.step * (1 - 0.045 * Math.min(Math.abs(d), 6));   // larger n above centre; outer ones pack tighter, like a drum turning away
+      if (n < 0 || Math.abs(d) > 3.6) { el.style.opacity = 0; continue; }
+      const a = -d * G.step * (1 - 0.045 * Math.min(Math.abs(d), 6));  // larger n below centre, so counting up scrolls upward; outer ones pack tighter
       const x = G.cx - G.rt * Math.cos(a);
       const y = G.cy + G.rt * Math.sin(a);
       const ad = Math.abs(d);
@@ -184,7 +187,7 @@
       value += vel;
       if (Math.abs(target - value) < 0.002 && Math.abs(vel) < 0.002) { value = target; vel = 0; }
       // idle hint: every ~7 s of stillness, a small scroll that springs back
-      if (!reduce && now - lastInteract > 7000 && Math.abs(vel) < 0.001) { vel = -0.09; lastInteract = now; }
+      if (!reduce && now - lastInteract > 7000 && Math.abs(vel) < 0.001) { vel = 0.09; lastInteract = now; }
     }
     draw();
     requestAnimationFrame(tick);
@@ -196,12 +199,12 @@
   stage.addEventListener("pointermove", e => {
     if (!dragging) return;
     const now = performance.now(), dy = e.clientY - dragY;
-    value = Math.max(0, Math.min(maxSheets, value + dy * sheetsPerPx()));   // drag down = roll back
-    dragV = (dy * sheetsPerPx()) / Math.max(1, now - lastMove) * 16; dragY = e.clientY; lastMove = now; lastInteract = now;
+    value = Math.max(0, value - dy * sheetsPerPx());                   // content follows the finger
+    dragV = (-dy * sheetsPerPx()) / Math.max(1, now - lastMove) * 16; dragY = e.clientY; lastMove = now; lastInteract = now;
   });
   const release = () => { if (!dragging) return; dragging = false; vel = dragV; lastInteract = performance.now(); };
   stage.addEventListener("pointerup", release); stage.addEventListener("pointercancel", release);
-  stage.addEventListener("wheel", e => { e.preventDefault(); vel -= e.deltaY * 0.0016; lastInteract = performance.now(); }, { passive: false });
+  stage.addEventListener("wheel", e => { e.preventDefault(); vel += e.deltaY * 0.0016; lastInteract = performance.now(); }, { passive: false });
 
   new ResizeObserver(() => { layout(); draw(); }).observe(stage);
   layout(); requestAnimationFrame(tick);
@@ -219,11 +222,10 @@
     $("dot").classList.toggle("on", !!s.online);
     $("seen").textContent = s.online ? (s.playing ? "speaking" : "online") : (s.last_seen_s == null ? "not heard from yet" : `offline · seen ${fmtAgo(s.last_seen_s)}`);
 
-    // wheel target: sheets left on this roll
-    maxSheets = s.roll_sheets || 200;
-    const left = s.sheets_this_roll == null ? maxSheets : Math.max(0, maxSheets - s.sheets_this_roll);
-    if (firstData) { value = Math.min(maxSheets, left + 14); vel = 0; firstData = false; }   // open with a roll down to the real count
-    target = left;
+    // wheel target: sheets pulled from this roll, counting up from 0
+    const pulled = Math.max(0, s.sheets_this_roll || 0);
+    if (firstData) { value = 0; vel = 0; firstData = false; }          // open by rolling up from 0
+    target = pulled;
 
     // row
     const actual = s.holder_source || s.built_source || s.desired_source;
@@ -233,10 +235,12 @@
     else if (s.desired_source !== actual && s.online) { fs.textContent = `switching…`; fs.className = "warn"; }
     else { fs.textContent = labelOf(s, actual); fs.className = ""; }
     $("statusSub").textContent = s.online ? (s.playing ? "speaking" : "online") : "offline";
-    $("pullSub").textContent = s.last_pull_s == null ? "no pulls yet" : fmtAgo(s.last_pull_s);
-    $("footLabel").textContent = chooserOpen ? "Choose feed" : (left <= 12 ? "Nearly out — new roll soon" : "Pull a sheet");
+    $("rollSub").textContent = s.roll_reset_pending ? "syncing…" : "reset to 0";
+    $("rollSub").className = s.roll_reset_pending ? "warn" : "";
+    $("footLabel").textContent = mode === "feed" ? "Choose feed" : mode === "roll" ? "Start a new roll?"
+      : (s.last_pull_s == null ? "Pull a sheet" : `Last pull ${fmtAgo(s.last_pull_s)}`);
 
-    if (chooserOpen) buildChooser();
+    if (mode === "feed") buildChooser();
   }
 
   async function refresh() {
@@ -276,12 +280,29 @@
 
   function openChooser() {
     if (!state) return;
-    chooserOpen = true; picked = null; buildChooser();
+    mode = "feed"; picked = null; buildChooser();
     $("sheet").classList.add("open"); $("row").style.visibility = "hidden";
     $("xBtn").classList.remove("hide"); $("okBtn").classList.remove("hide"); $("footLabel").textContent = "Choose feed";
   }
+  function openRoll() {
+    if (!state) return;
+    mode = "roll";
+    const n = Math.max(0, state.sheets_this_roll || 0);
+    $("sheet").innerHTML = `<div class="confirm"><b>Finished or replaced the roll?</b><small>The count goes back to 0. This roll: ${n} sheet${n === 1 ? "" : "s"}.${state.online ? "" : " The holder is offline; it will reset when it reconnects."}</small></div>`;
+    $("sheet").classList.add("open"); $("row").style.visibility = "hidden";
+    $("okBtn").disabled = false;
+    $("xBtn").classList.remove("hide"); $("okBtn").classList.remove("hide"); $("footLabel").textContent = "Start a new roll?";
+  }
+  async function confirmRoll() {
+    try {
+      const r = await fetch(api("/new-roll"), { method: "POST" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      target = 0; toast("Count reset to 0");
+    } catch (e) { toast(e.message); }
+    closeChooser(); refresh();
+  }
   function closeChooser() {
-    chooserOpen = false;
+    mode = null;
     $("sheet").classList.remove("open"); $("row").style.visibility = "";
     $("xBtn").classList.add("hide"); $("okBtn").classList.add("hide");
     if (state) render(state);
@@ -296,7 +317,7 @@
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.detail || `HTTP ${r.status}`);
       toast(`Preparing ${svc.label}…`);
-      vel = -0.6;                          // a little roll to mark the change
+      vel = 0.6;                           // a little roll to mark the change
     } catch (e) { toast(e.message); }
     closeChooser(); refresh();
   }
@@ -309,9 +330,9 @@
 
   $("optFeed").onclick = openChooser;
   $("optStatus").onclick = () => { refresh(); toast(state && state.online ? `Online · checked in ${fmtAgo(state.last_seen_s)}` : "The holder isn't connected right now"); };
-  $("optPull").onclick = () => { vel = -0.8; lastInteract = performance.now(); };
+  $("optRoll").onclick = openRoll;
   $("xBtn").onclick = closeChooser;
-  $("okBtn").onclick = confirmChoice;
+  $("okBtn").onclick = () => (mode === "roll" ? confirmRoll() : confirmChoice());
 
   const q = new URLSearchParams(location.search);
   if (q.get("connected")) { toast(`${q.get("connected")} connected`); history.replaceState(null, "", location.pathname); }

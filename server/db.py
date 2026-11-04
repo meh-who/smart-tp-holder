@@ -39,6 +39,8 @@ def init():
         cols = {r["name"] for r in c.execute("PRAGMA table_info(holders)")}
         if "last_page_open" not in cols:           # added in rev 2.1 (LED "paired" flash)
             c.execute("ALTER TABLE holders ADD COLUMN last_page_open REAL")
+        if "roll_reset_ts" not in cols:            # added in rev 2.2 ("New roll" button)
+            c.execute("ALTER TABLE holders ADD COLUMN roll_reset_ts REAL")
 
 
 @contextmanager
@@ -79,6 +81,13 @@ def set_desired_source(hid, source):
 def note_page_open(hid):
     with conn() as c:
         c.execute("UPDATE holders SET last_page_open=? WHERE id=?", (time.time(), hid))
+
+
+def request_roll_reset(hid):
+    now = time.time()
+    with conn() as c:
+        c.execute("UPDATE holders SET roll_reset_ts=? WHERE id=?", (now, hid))
+    return now
 
 
 def set_source(hid, source):

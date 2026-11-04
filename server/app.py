@@ -112,6 +112,10 @@ def status(hid: str, request: Request):
     online = bool(ts and time.time() - ts < ONLINE_WINDOW_S)
     hb = hb or {}
     built_source = b["source"] if b and b["payload"] else None
+    # A "New roll" the holder hasn't applied yet still shows as 0 on the page.
+    reset_ts = h.get("roll_reset_ts") or 0
+    reset_pending = reset_ts > (hb.get("roll_reset_seen") or 0)
+    sheets = 0 if reset_pending else hb.get("sheets_this_roll")
     return {
         "holder": {"id": hid, "name": h["name"]},
         "online": online,
@@ -119,7 +123,8 @@ def status(hid: str, request: Request):
         "last_pull_s": hb.get("last_pull_s_ago") if hb.get("last_pull_s_ago", -1) >= 0 else None,
         "playing": hb.get("playing", False),
         "queued": hb.get("queued", 0),
-        "sheets_this_roll": hb.get("sheets_this_roll"),
+        "sheets_this_roll": sheets,
+        "roll_reset_pending": reset_pending,
         "roll_sheets": hb.get("roll_sheets", 200),
         "sheets_total": hb.get("sheets_total"),
         "rssi": hb.get("rssi"),
@@ -156,6 +161,14 @@ async def set_source(hid: str, request: Request):
     db.set_desired_source(hid, source)
     bulletin.request(hid, source)
     return {"ok": True, "desired_source": source}
+
+
+@app.post("/api/holder/{hid}/new-roll")
+def new_roll(hid: str, request: Request):
+    _holder_or_404(hid)
+    _check_session(request, hid)
+    ts = db.request_roll_reset(hid)
+    return {"ok": True, "roll_reset_ts": ts}
 
 
 @app.post("/api/holder/{hid}/disconnect")
@@ -214,6 +227,7 @@ async def heartbeat(hid: str, request: Request):
     return {"source": b["source"] if ready else h["source"],
             "bulletin": b["version"] if ready else "",
             "page_open_ts": h.get("last_page_open") or 0,
+            "roll_reset_ts": h.get("roll_reset_ts") or 0,
             "poll_s": POLL_S}
 
 

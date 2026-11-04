@@ -52,4 +52,6 @@ bool load_cached(Bulletin& out);                            // last bulletin fro
 void request_now();                                         // poke the task (e.g. after a button press)
 void note_played(const char* item_id);                      // reported in the next heartbeat
 bool phone_tapped();                                        // true once per new companion-page session
+void set_roll_reset_seen(double ts);                        // at boot, from flash: last "New roll" applied
+bool take_roll_reset(double& ts);                           // true once when the page asked for a new roll
 }

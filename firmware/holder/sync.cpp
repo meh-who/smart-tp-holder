@@ -21,6 +21,8 @@ char               g_played[16][24];       // ids spoken since the last heartbea
 volatile uint8_t   g_played_n = 0;
 double             g_page_open_ts = 0;      // server timestamp of the last companion-page open
 volatile bool      g_phone_tapped = false;
+double             g_roll_reset_seen = 0;   // last "New roll" request applied (server timestamp)
+double             g_roll_reset_pending = 0;
 
 String url(const char* path) { return String(SERVER_URL) + path; }
 
@@ -152,6 +154,7 @@ uint32_t heartbeat() {
   doc["bulletin"] = g_current_version;
   doc["source"] = g_current_source;
   doc["mains"] = MAINS_POWERED ? true : false;
+  doc["roll_reset_seen"] = g_roll_reset_seen;
   xSemaphoreTake(g_mutex, portMAX_DELAY);
   JsonArray pl = doc["played"].to<JsonArray>();
   for (uint8_t i = 0; i < g_played_n; ++i) pl.add(g_played[i]);
@@ -178,6 +181,8 @@ uint32_t heartbeat() {
   xSemaphoreGive(g_mutex);
   g_status->online = true;
 
+  double rr = r["roll_reset_ts"] | 0.0;
+  if (rr > g_roll_reset_seen && rr > g_roll_reset_pending) g_roll_reset_pending = rr;
   double page_ts = r["page_open_ts"] | 0.0;
   if (page_ts > g_page_open_ts) {
     if (g_page_open_ts > 0) g_phone_tapped = true;   // not on the very first heartbeat after boot
@@ -286,6 +291,13 @@ bool load_cached(Bulletin& out) {
 bool online() { return g_status && g_status->online; }
 void request_now() { g_poke = true; }
 bool phone_tapped() { bool t = g_phone_tapped; g_phone_tapped = false; return t; }
+void set_roll_reset_seen(double ts) { g_roll_reset_seen = ts; }
+bool take_roll_reset(double& ts) {
+  if (g_roll_reset_pending <= g_roll_reset_seen) return false;
+  ts = g_roll_reset_pending;
+  g_roll_reset_seen = ts;            // reported in the next heartbeat, so the page stops showing "pending"
+  return true;
+}
 void note_played(const char* item_id) {
   if (!item_id || !*item_id) return;
   xSemaphoreTake(g_mutex, portMAX_DELAY);

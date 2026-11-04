@@ -119,6 +119,16 @@ static void adopt_bulletin(const Bulletin& b, bool announce_switch) {
   }
 }
 
+// ---- New roll: the button, the serial console and the companion page all land here.
+static void new_roll() {
+  status.sheets_this_roll = 0;
+  low_paper_said = false;
+  prefs.putUInt("roll", 0);
+  if (bulletin.sys_newroll[0]) player.play_now(bulletin.sys_newroll, 2000);
+  Serial.println("[holder] new roll: count reset to 0");
+  net::request_now();                // tell the page promptly
+}
+
 // ---- Console -------------------------------------------------------------------
 static void handle_serial() {
   if (!Serial.available()) return;
@@ -133,8 +143,7 @@ static void handle_serial() {
     } else Serial.println("[cal] usage: type 'cal' marks the start; pull paper; 'cal 570' finishes");
     cal_start_count = encoder.getCount();
   } else if (line == "newroll") {
-    status.sheets_this_roll = 0; low_paper_said = false; prefs.putUInt("roll", 0);
-    if (bulletin.sys_newroll[0]) player.play_now(bulletin.sys_newroll, 2000);
+    new_roll();
   } else if (line == "sync") {
     net::request_now();
   } else if (line == "status") {
@@ -153,8 +162,7 @@ static void handle_button(uint32_t now) {
   if (!down && button_was_down) {
     uint32_t held = now - button_down_ms;
     if (held >= 2000) {
-      status.sheets_this_roll = 0; low_paper_said = false; prefs.putUInt("roll", 0);
-      if (bulletin.sys_newroll[0]) player.play_now(bulletin.sys_newroll, 2000);
+      new_roll();
     } else if (held > 30 && player.last_path()[0]) {
       player.play_now(player.last_path(), player.last_duration());
     }
@@ -188,6 +196,7 @@ void setup() {
   led.set(StatusLed::Mode::WAITING);
   load_played();
   if (net::load_cached(bulletin)) Serial.printf("[holder] cached bulletin %s (%u items, %s)\n", bulletin.version, bulletin.count, bulletin.source);
+  net::set_roll_reset_seen(prefs.getDouble("rrts", 0));
   net::begin(&status);
   last_poll_ms = millis();
 }
@@ -247,6 +256,7 @@ void loop() {
   // a double flash the moment a phone opens the companion page.
   led.set((status.online && bulletin.count > 0) ? StatusLed::Mode::READY : StatusLed::Mode::WAITING);
   if (net::phone_tapped()) led.paired();
+  { double ts; if (net::take_roll_reset(ts)) { prefs.putDouble("rrts", ts); new_roll(); } }
   led.loop();
 
   handle_button(now);
