@@ -212,7 +212,7 @@ void task(void*) {
 
 }  // namespace
 
-namespace sync {
+namespace net {
 
 void begin(HolderStatus* status) {
   g_status = status;
@@ -293,4 +293,4 @@ void note_played(const char* item_id) {
   xSemaphoreGive(g_mutex);
 }
 
-}  // namespace sync
+}  // namespace net

@@ -44,7 +44,7 @@ struct HolderStatus {
   volatile uint32_t last_sync_error = 0;   // HTTP code or -1
 };
 
-namespace sync {
+namespace net {
 void begin(HolderStatus* status);
 bool take_bulletin(Bulletin& out, bool& source_changed);   // true if a new one is ready
 bool online();

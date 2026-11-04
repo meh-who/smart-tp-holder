@@ -100,11 +100,11 @@ static bool enqueue_next_item() {
     BulletinItem& it = bulletin.items[cursor];
     cursor = (cursor + 1) % bulletin.count;
     if (was_played(it.id)) continue;
-    if (player.enqueue(it.file, it.duration_ms, it.id)) { mark_played(it.id); sync::note_played(it.id); return true; }
+    if (player.enqueue(it.file, it.duration_ms, it.id)) { mark_played(it.id); net::note_played(it.id); return true; }
     return false;   // backlog cap: stop trying
   }
   // Everything cached has been heard: ask the server for more and say so once.
-  sync::request_now();
+  net::request_now();
   if (bulletin.sys_empty[0] && !player.playing()) player.play_now(bulletin.sys_empty, 3000);
   return false;
 }
@@ -136,7 +136,7 @@ static void handle_serial() {
     status.sheets_this_roll = 0; low_paper_said = false; prefs.putUInt("roll", 0);
     if (bulletin.sys_newroll[0]) player.play_now(bulletin.sys_newroll, 2000);
   } else if (line == "sync") {
-    sync::request_now();
+    net::request_now();
   } else if (line == "status") {
     Serial.printf("fw %s  online %d  source %s  bulletin %s  items %u  cursor %u\n", FW_VERSION, status.online,
                   bulletin.source, bulletin.version, bulletin.count, cursor);
@@ -187,8 +187,8 @@ void setup() {
   led.begin(PIN_LED);
   led.set(StatusLed::Mode::WAITING);
   load_played();
-  if (sync::load_cached(bulletin)) Serial.printf("[holder] cached bulletin %s (%u items, %s)\n", bulletin.version, bulletin.count, bulletin.source);
-  sync::begin(&status);
+  if (net::load_cached(bulletin)) Serial.printf("[holder] cached bulletin %s (%u items, %s)\n", bulletin.version, bulletin.count, bulletin.source);
+  net::begin(&status);
   last_poll_ms = millis();
 }
 
@@ -238,7 +238,7 @@ void loop() {
 
   // A new bulletin from the sync task?
   { Bulletin b; bool switched = false;
-    if (sync::take_bulletin(b, switched)) adopt_bulletin(b, switched); }
+    if (net::take_bulletin(b, switched)) adopt_bulletin(b, switched); }
 
   status.queued = player.queued();
   status.playing = player.playing();
@@ -246,7 +246,7 @@ void loop() {
   // LED: steady once we are online with a feed to read; breathe while waiting;
   // a double flash the moment a phone opens the companion page.
   led.set((status.online && bulletin.count > 0) ? StatusLed::Mode::READY : StatusLed::Mode::WAITING);
-  if (sync::phone_tapped()) led.paired();
+  if (net::phone_tapped()) led.paired();
   led.loop();
 
   handle_button(now);
