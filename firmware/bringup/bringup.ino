@@ -87,7 +87,6 @@ void setup() {
   out = new AudioOutputI2S();
   out->SetPinout(PIN_I2S_BCLK, PIN_I2S_LRC, PIN_I2S_DIN);
   out->SetRate(22050);
-  out->SetBitsPerSample(16);
   out->SetChannels(2);
   out->begin();
   delay(50);
