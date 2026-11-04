@@ -100,7 +100,7 @@
   <div class="stage" id="stage" aria-label="Sheets left on the roll">
     <div class="disc" id="disc"></div>
     <div class="core" id="core"></div>
-    <div class="unit" id="unit"><b>sheets</b>pulled</div>
+    <div class="unit" id="unit"><b>sheets</b>left</div>
   </div>
 
   <div class="row" id="row">
@@ -114,7 +114,7 @@
     </button>
     <button class="opt" id="optRoll" type="button" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
-      <b>New roll</b><small id="rollSub">reset to 0</small>
+      <b>New roll</b><small id="rollSub">full roll</small>
     </button>
   </div>
 
@@ -137,49 +137,61 @@
   let state = null, mode = null, picked = null;     // mode: null | "feed" | "roll"
 
   // ---------------------------------------------------------------- wheel ---
-  // The half-disc is the roll seen end-on; the numbers count sheets pulled from
-  // this roll, from 0. The wheel eases toward the real count, can be flicked by
-  // hand and springs back. Each pull scrolls the next number up from below.
+  // The disc is the roll seen end-on, around a fixed cardboard core; the numbers
+  // are sheets left. The paper ring shrinks as the roll is used, by area like a
+  // real roll (r² ∝ paper left), and the numbers shrink with it so they always
+  // sit inside the paper that remains. Everything is drawn from the animated
+  // value, so pulls, flicks, the opening unwind and a new roll all move the ring.
   const stage = $("stage"), disc = $("disc"), core = $("core"), unit = $("unit");
   const SPAN = 7;                       // numbers drawn either side of centre
   const nodes = [];
   for (let i = 0; i < SPAN * 2 + 1; i++) { const n = document.createElement("div"); n.className = "num"; stage.appendChild(n); nodes.push(n); }
-  let G = null;                         // geometry
-  let value = 0, target = 0, vel = 0;
+  let G = null;                         // fixed geometry: stage, full roll, core
+  let total = 200;                      // sheets on a full roll (from the holder)
+  let value = 200, target = 200, vel = 0;
   let dragging = false, dragY = 0, dragV = 0, lastMove = 0, lastInteract = performance.now();
 
   function layout() {
     const W = stage.clientWidth, H = stage.clientHeight;
-    const R = Math.min(W * 0.70, H * 0.47);  // whole roll stays inside the stage, top to bottom
-    const cx = W * 0.48 + R, cy = H * 0.50;
-    const big = Math.max(46, Math.min(92, R * 0.22));            // centre number size
-    const rt = R - big * 0.95;          // radius the numbers ride on
-    const step = Math.asin(Math.min(0.9, big * 1.22 / rt));      // angle between numbers
-    G = { W, H, R, cx, cy, big, rt, step };
-    Object.assign(disc.style, { width: `${2 * R}px`, height: `${2 * R}px`, left: `${cx - R}px`, top: `${cy - R}px` });
-    const Rc = R * 0.40;                // a real roll: ~44 mm core in a ~110 mm roll
+    const Rfull = Math.min(W * 0.70, H * 0.47);   // a full roll fits the stage top to bottom
+    const Rc = Rfull * 0.40;                      // a real roll: ~44 mm core in a ~110 mm roll
+    const cx = W + Rc * 0.35, cy = H * 0.50;      // core peeks in from the right edge
+    G = { W, H, Rfull, Rc, cx, cy };
     Object.assign(core.style, { width: `${2 * Rc}px`, height: `${2 * Rc}px`, left: `${cx - Rc}px`, top: `${cy - Rc}px` });
-    Object.assign(unit.style, { right: `${W - (cx - R) + 14}px`, top: `${cy - 18}px` });
+  }
+
+  function roll(v) {                    // paper radius, ring and number size for v sheets left
+    const f = Math.max(0, Math.min(1, v / total));
+    const R = Math.sqrt(G.Rc * G.Rc + (G.Rfull * G.Rfull - G.Rc * G.Rc) * f);
+    const ring = R - G.Rc;
+    const big = Math.max(13, Math.min(84, ring * 0.40));      // shrinks with the paper
+    const rt = Math.max(G.Rc + ring * 0.5, G.Rc + big * 0.75); // mid-ring; when the paper is thinner than a digit, stay off the core
+    const step = Math.asin(Math.min(0.55, big * 1.02 / rt));
+    return { R, ring, big, rt, step };
   }
 
   function mix(a, b, t) { return `color-mix(in srgb, ${a} ${Math.round((1 - t) * 100)}%, ${b})`; }
 
   function draw() {
     if (!G) return;
+    const g = roll(value);
+    Object.assign(disc.style, { width: `${2 * g.R}px`, height: `${2 * g.R}px`, left: `${G.cx - g.R}px`, top: `${G.cy - g.R}px` });
+    Object.assign(unit.style, { right: `${G.W - (G.cx - g.R) + 14}px`, top: `${G.cy - 18}px` });
     const base = Math.round(value);
     for (let i = 0; i < nodes.length; i++) {
       const n = base - SPAN + i;
       const d = value - n;                 // signed distance from centre, in sheets
       const el = nodes[i];
-      if (n < 0 || Math.abs(d) > 3.6) { el.style.opacity = 0; continue; }
-      const a = -d * G.step * (1 - 0.045 * Math.min(Math.abs(d), 6));  // larger n below centre, so counting up scrolls upward; outer ones pack tighter
-      const x = G.cx - G.rt * Math.cos(a);
-      const y = G.cy + G.rt * Math.sin(a);
+      if (n < 0 || n > total || Math.abs(d) > 3.6) { el.style.opacity = 0; continue; }
+      const a = d * g.step * (1 - 0.045 * Math.min(Math.abs(d), 6));   // larger n above centre; outer ones pack tighter
+      const x = G.cx - g.rt * Math.cos(a);
+      const y = G.cy + g.rt * Math.sin(a);
       const ad = Math.abs(d);
+      if (Math.abs(a) > 1.2 || x > G.W - g.big * 0.4) { el.style.opacity = 0; continue; }   // swung round past the edge
       const s = Math.max(0.42, 1 - 0.13 * ad);
       const o = Math.max(0, 1 - 0.15 * ad);
       el.textContent = n;
-      el.style.fontSize = `${G.big}px`;
+      el.style.fontSize = `${g.big}px`;
       el.style.fontWeight = ad < 0.5 ? 500 : 400;
       el.style.color = mix("var(--ink)", "var(--faint)", Math.min(1, ad / 3.2));
       el.style.opacity = o;
@@ -195,24 +207,24 @@
       value += vel;
       if (Math.abs(target - value) < 0.002 && Math.abs(vel) < 0.002) { value = target; vel = 0; }
       // idle hint: every ~7 s of stillness, a small scroll that springs back
-      if (!reduce && now - lastInteract > 7000 && Math.abs(vel) < 0.001) { vel = 0.09; lastInteract = now; }
+      if (!reduce && now - lastInteract > 7000 && Math.abs(vel) < 0.001) { vel = -0.09; lastInteract = now; }
     }
     draw();
     requestAnimationFrame(tick);
   }
 
-  // drag / flick / mouse wheel
-  const sheetsPerPx = () => 1 / (G.big * 1.05);
+  // drag / flick / mouse wheel: content follows the finger
+  const sheetsPerPx = () => 1 / (roll(value).big * 1.05);
   stage.addEventListener("pointerdown", e => { dragging = true; dragY = e.clientY; dragV = 0; lastMove = performance.now(); stage.setPointerCapture(e.pointerId); });
   stage.addEventListener("pointermove", e => {
     if (!dragging) return;
     const now = performance.now(), dy = e.clientY - dragY;
-    value = Math.max(0, value - dy * sheetsPerPx());                   // content follows the finger
-    dragV = (-dy * sheetsPerPx()) / Math.max(1, now - lastMove) * 16; dragY = e.clientY; lastMove = now; lastInteract = now;
+    value = Math.max(0, Math.min(total, value + dy * sheetsPerPx()));
+    dragV = (dy * sheetsPerPx()) / Math.max(1, now - lastMove) * 16; dragY = e.clientY; lastMove = now; lastInteract = now;
   });
   const release = () => { if (!dragging) return; dragging = false; vel = dragV; lastInteract = performance.now(); };
   stage.addEventListener("pointerup", release); stage.addEventListener("pointercancel", release);
-  stage.addEventListener("wheel", e => { e.preventDefault(); vel += e.deltaY * 0.0016; lastInteract = performance.now(); }, { passive: false });
+  stage.addEventListener("wheel", e => { e.preventDefault(); vel -= e.deltaY * 0.0016; lastInteract = performance.now(); }, { passive: false });
 
   new ResizeObserver(() => { layout(); draw(); }).observe(stage);
   layout(); requestAnimationFrame(tick);
@@ -230,10 +242,11 @@
     $("dot").classList.toggle("on", !!s.online);
     $("seen").textContent = s.online ? (s.playing ? "speaking" : "online") : (s.last_seen_s == null ? "not heard from yet" : `offline · seen ${fmtAgo(s.last_seen_s)}`);
 
-    // wheel target: sheets pulled from this roll, counting up from 0
-    const pulled = Math.max(0, s.sheets_this_roll || 0);
-    if (firstData) { value = 0; vel = 0; firstData = false; }          // open by rolling up from 0
-    target = pulled;
+    // wheel target: sheets left on this roll, counting down
+    total = Math.max(1, s.roll_sheets || 200);
+    const left = Math.max(0, total - (s.sheets_this_roll || 0));
+    if (firstData) { value = total; vel = 0; firstData = false; }     // open on a full roll and unwind to now
+    target = left;
 
     // row
     const actual = s.holder_source || s.built_source || s.desired_source;
@@ -243,7 +256,7 @@
     else if (s.desired_source !== actual && s.online) { fs.textContent = `switching…`; fs.className = "warn"; }
     else { fs.textContent = labelOf(s, actual); fs.className = ""; }
     $("statusSub").textContent = s.online ? (s.playing ? "speaking" : "online") : "offline";
-    $("rollSub").textContent = s.roll_reset_pending ? "syncing…" : "reset to 0";
+    $("rollSub").textContent = s.roll_reset_pending ? "syncing…" : "full roll";
     $("rollSub").className = s.roll_reset_pending ? "warn" : "";
     if (mode) $("footLabel").textContent = mode === "feed" ? "Choose feed" : "Start a new roll?";
 
@@ -295,7 +308,7 @@
     if (!state) return;
     mode = "roll";
     const n = Math.max(0, state.sheets_this_roll || 0);
-    $("sheet").innerHTML = `<div class="confirm"><b>Finished or replaced the roll?</b><small>The count goes back to 0. This roll: ${n} sheet${n === 1 ? "" : "s"}.${state.online ? "" : " The holder is offline; it will reset when it reconnects."}</small></div>`;
+    $("sheet").innerHTML = `<div class="confirm"><b>Finished or replaced the roll?</b><small>The count goes back to ${total} sheets. This roll gave ${n} sheet${n === 1 ? "" : "s"}.${state.online ? "" : " The holder is offline; it will reset when it reconnects."}</small></div>`;
     $("sheet").classList.add("open"); $("row").style.visibility = "hidden"; $("foot").classList.add("open");
     $("okBtn").disabled = false;
     $("xBtn").classList.remove("hide"); $("okBtn").classList.remove("hide"); $("footLabel").textContent = "Start a new roll?";
@@ -304,7 +317,7 @@
     try {
       const r = await fetch(api("/new-roll"), { method: "POST" });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      target = 0; toast("Count reset to 0");
+      target = total; toast(`New roll · ${total} sheets`);
     } catch (e) { toast(e.message); }
     closeChooser(); refresh();
   }
@@ -324,7 +337,7 @@
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.detail || `HTTP ${r.status}`);
       toast(`Preparing ${svc.label}…`);
-      vel = 0.6;                           // a little roll to mark the change
+      vel = -0.6;                          // a little roll to mark the change
     } catch (e) { toast(e.message); }
     closeChooser(); refresh();
   }
