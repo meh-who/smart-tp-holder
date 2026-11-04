@@ -148,7 +148,7 @@ uint32_t heartbeat() {
   doc["sheets_total"] = g_status->sheets_total;
   doc["sheets_this_roll"] = g_status->sheets_this_roll;
   doc["roll_sheets"] = ROLL_SHEETS;
-  doc["last_pull_s_ago"] = g_status->last_pull_ms ? (millis() - g_status->last_pull_ms) / 1000 : -1;
+  doc["last_pull_s_ago"] = g_status->last_pull_ms ? (int32_t)((millis() - g_status->last_pull_ms) / 1000) : (int32_t)-1;  // signed: -1 = never
   doc["queued"] = g_status->queued;
   doc["playing"] = g_status->playing;
   doc["bulletin"] = g_current_version;

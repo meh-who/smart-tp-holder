@@ -120,7 +120,8 @@ def status(hid: str, request: Request):
         "holder": {"id": hid, "name": h["name"]},
         "online": online,
         "last_seen_s": int(time.time() - ts) if ts else None,
-        "last_pull_s": hb.get("last_pull_s_ago") if hb.get("last_pull_s_ago", -1) >= 0 else None,
+        # older firmware sent "never" as an unsigned -1 (~4.3e9 s); anything over a year means never
+        "last_pull_s": _lp if isinstance(_lp := hb.get("last_pull_s_ago"), (int, float)) and 0 <= _lp < 365 * 86400 else None,
         "playing": hb.get("playing", False),
         "queued": hb.get("queued", 0),
         "sheets_this_roll": sheets,

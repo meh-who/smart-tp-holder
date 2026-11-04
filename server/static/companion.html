@@ -26,7 +26,7 @@
     font: 16px/1.35 "Inter", ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased; overflow: hidden; overscroll-behavior: none; }
   .app { position: relative; height: 100dvh; max-width: 520px; margin: 0 auto; display: grid;
-    grid-template-rows: auto 1fr auto auto; padding-top: env(safe-area-inset-top); }
+    grid-template-rows: auto 1fr auto; padding-top: env(safe-area-inset-top); }
 
   /* top line */
   .top { display: flex; align-items: center; gap: 10px; padding: 16px 22px 0; z-index: 2; }
@@ -47,7 +47,7 @@
   .unit b { display: block; color: var(--ink); font-weight: 600; font-size: 15px; letter-spacing: 0; }
 
   /* bottom options */
-  .row { display: grid; grid-template-columns: repeat(3, 1fr); padding: 6px 12px 14px; z-index: 2; }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); padding: 6px 12px calc(14px + env(safe-area-inset-bottom)); z-index: 2; }
   .opt { appearance: none; border: 0; background: none; color: inherit; font: inherit; padding: 10px 4px;
     display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; border-radius: 14px; }
   .opt:active { background: color-mix(in srgb, var(--ink) 6%, transparent); }
@@ -57,7 +57,10 @@
   .opt small.warn { color: var(--warn); }
 
   /* footer */
-  .foot { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; padding: 6px 18px calc(18px + env(safe-area-inset-bottom)); z-index: 2; }
+  /* ✕ / ✓ bar: only while choosing a feed or confirming a new roll, laid over the bottom so the roll never resizes */
+  .foot { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: 64px 1fr 64px; align-items: center;
+    padding: 6px 18px calc(18px + env(safe-area-inset-bottom)); z-index: 4; background: var(--bg); opacity: 0; pointer-events: none; transition: opacity .25s; }
+  .foot.open { opacity: 1; pointer-events: auto; }
   .x, .ok { appearance: none; border: 0; cursor: pointer; display: grid; place-items: center; transition: opacity .25s, transform .25s; }
   .x { width: 44px; height: 44px; background: none; color: var(--ink); }
   .x svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
@@ -117,9 +120,9 @@
 
   <div class="sheet" id="sheet" role="dialog" aria-label="Choose"></div>
 
-  <div class="foot">
+  <div class="foot" id="foot">
     <button class="x hide" id="xBtn" type="button" aria-label="Cancel"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    <div class="label" id="footLabel">Pull a sheet</div>
+    <div class="label" id="footLabel"></div>
     <button class="ok hide" id="okBtn" type="button" aria-label="Read this feed"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
   </div>
 </div>
@@ -147,7 +150,7 @@
 
   function layout() {
     const W = stage.clientWidth, H = stage.clientHeight;
-    const R = Math.min(W * 0.70, H * 0.56);
+    const R = Math.min(W * 0.70, H * 0.47);  // whole roll stays inside the stage, top to bottom
     const cx = W * 0.48 + R, cy = H * 0.50;
     const big = Math.max(46, Math.min(92, R * 0.22));            // centre number size
     const rt = R - big * 0.95;          // radius the numbers ride on
@@ -242,8 +245,7 @@
     $("statusSub").textContent = s.online ? (s.playing ? "speaking" : "online") : "offline";
     $("rollSub").textContent = s.roll_reset_pending ? "syncing…" : "reset to 0";
     $("rollSub").className = s.roll_reset_pending ? "warn" : "";
-    $("footLabel").textContent = mode === "feed" ? "Choose feed" : mode === "roll" ? "Start a new roll?"
-      : (s.last_pull_s == null ? "Pull a sheet" : `Last pull ${fmtAgo(s.last_pull_s)}`);
+    if (mode) $("footLabel").textContent = mode === "feed" ? "Choose feed" : "Start a new roll?";
 
     if (mode === "feed") buildChooser();
   }
@@ -286,7 +288,7 @@
   function openChooser() {
     if (!state) return;
     mode = "feed"; picked = null; buildChooser();
-    $("sheet").classList.add("open"); $("row").style.visibility = "hidden";
+    $("sheet").classList.add("open"); $("row").style.visibility = "hidden"; $("foot").classList.add("open");
     $("xBtn").classList.remove("hide"); $("okBtn").classList.remove("hide"); $("footLabel").textContent = "Choose feed";
   }
   function openRoll() {
@@ -294,7 +296,7 @@
     mode = "roll";
     const n = Math.max(0, state.sheets_this_roll || 0);
     $("sheet").innerHTML = `<div class="confirm"><b>Finished or replaced the roll?</b><small>The count goes back to 0. This roll: ${n} sheet${n === 1 ? "" : "s"}.${state.online ? "" : " The holder is offline; it will reset when it reconnects."}</small></div>`;
-    $("sheet").classList.add("open"); $("row").style.visibility = "hidden";
+    $("sheet").classList.add("open"); $("row").style.visibility = "hidden"; $("foot").classList.add("open");
     $("okBtn").disabled = false;
     $("xBtn").classList.remove("hide"); $("okBtn").classList.remove("hide"); $("footLabel").textContent = "Start a new roll?";
   }
@@ -308,7 +310,7 @@
   }
   function closeChooser() {
     mode = null;
-    $("sheet").classList.remove("open"); $("row").style.visibility = "";
+    $("sheet").classList.remove("open"); $("row").style.visibility = ""; $("foot").classList.remove("open");
     $("xBtn").classList.add("hide"); $("okBtn").classList.add("hide");
     if (state) render(state);
   }
