@@ -7,4 +7,5 @@ COPY . .
 ENV HOLDER_DB=/data/holder.sqlite MEDIA_DIR=/data/media CURATED_DIR=/data/curated
 VOLUME /data
 EXPOSE 8000
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Railway/Render set $PORT; Fly and local runs use 8000.
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}"]

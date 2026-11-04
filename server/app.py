@@ -35,6 +35,14 @@ ONLINE_WINDOW_S = POLL_S * 2 + 10
 
 app = FastAPI(title="toilet roll holder — companion", docs_url=None, redoc_url=None)
 db.init()
+# Register holders from the environment so a dashboard-only host (Railway, Render)
+# needs no shell: HOLDERS="lisbon-01:<key>[,other-id:<key>]" — same id/key as config.h.
+for _spec in filter(None, (x.strip() for x in os.environ.get("HOLDERS", "").split(","))):
+    _hid, _, _key = _spec.partition(":")
+    if _hid and _key:
+        _h = db.get_holder(_hid)
+        if not _h or _h["key"] != _key:
+            db.add_holder(_hid, _key)
 os.makedirs(tts.MEDIA_DIR, exist_ok=True)
 app.mount("/media", StaticFiles(directory=tts.MEDIA_DIR), name="media")
 _session = URLSafeSerializer(os.environ.get("SECRET_KEY", "dev-secret-change-me"), salt="page-session")
