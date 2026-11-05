@@ -260,15 +260,23 @@
     $("rollSub").className = s.roll_reset_pending ? "warn" : "";
     if (mode) $("footLabel").textContent = mode === "feed" ? "Choose feed" : "Start a new roll?";
 
-    if (mode === "feed") buildChooser();
+    // The page now refreshes every second; only rebuild the chooser when something in it changed,
+    // so a button isn't swapped out from under a finger mid-tap.
+    const sig = JSON.stringify([s.services, s.desired_source, s.holder_source, s.built_source]);
+    if (mode === "feed" && sig !== chooserSig) { chooserSig = sig; buildChooser(); }
   }
+  let chooserSig = "";
 
+  let inflight = false;
   async function refresh() {
+    if (inflight) return;
+    inflight = true;
     try {
       const r = await fetch(api("/status"), { cache: "no-store" });
       if (!r.ok) throw new Error(r.status === 403 ? "Tap the holder with your phone to open this page." : `HTTP ${r.status}`);
       render(await r.json());
     } catch (e) { $("seen").textContent = e.message; }
+    finally { inflight = false; }
   }
 
   // ---------------------------------------------------------- chooser ---
@@ -357,7 +365,8 @@
   const q = new URLSearchParams(location.search);
   if (q.get("connected")) { toast(`${q.get("connected")} connected`); history.replaceState(null, "", location.pathname); }
   refresh();
-  setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 5000);
+  // Every second while the page is in front, so each sheet shows up as it is pulled.
+  setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 1000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
 })();
 </script>
