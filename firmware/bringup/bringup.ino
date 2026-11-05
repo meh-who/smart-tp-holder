@@ -98,9 +98,11 @@ void setup() {
   // 3. Encoder
   ESP32Encoder::useInternalWeakPullResistors = puType::up;
   enc.attachFullQuad(PIN_ENC_A, PIN_ENC_B);
-  enc.setFilter(1023);
+  enc.setFilter(1000);   // 12.5 µs glitch filter (1023 is just over the S2's hardware limit)
   enc.clearCount();
   Serial.println("[3] Encoder: turn the wheel (or drag paper under it). Forward should count UP.");
+  Serial.printf("    pins at rest: A(%d)=%d  B(%d)=%d   (0 or 1 are both fine at rest; they must change as you turn)\n",
+                PIN_ENC_A, digitalRead(PIN_ENC_A), PIN_ENC_B, digitalRead(PIN_ENC_B));
 
   // 4. Button
   pinMode(PIN_BUTTON, INPUT_PULLUP);
@@ -122,6 +124,14 @@ void loop() {
       last_print = millis();
     }
     if (llabs(tick_acc) >= 2) { tick_acc = 0; tone_ms(1800, 6, 0.12f); }   // soft tick per ~1.4 mm
+  }
+
+  // Raw pin levels: if these never change while you turn the wheel, it's the
+  // wiring or the encoder. If they change but "enc" lines don't appear, it's software.
+  static int lastA = -1, lastB = -1; static uint32_t lastPinPrint = 0;
+  int a = digitalRead(PIN_ENC_A), bb = digitalRead(PIN_ENC_B);
+  if ((a != lastA || bb != lastB) && millis() - lastPinPrint > 60) {
+    Serial.printf("pins A=%d B=%d\n", a, bb); lastA = a; lastB = bb; lastPinPrint = millis();
   }
 
   bool down = digitalRead(PIN_BUTTON) == LOW;

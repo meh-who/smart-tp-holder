@@ -30,7 +30,8 @@
 // ESP32-S3 boards: "ESP32S3 Dev Module", USB CDC On Boot: Enabled, a partition
 //   scheme with >= 2 MB for the filesystem.
 //
-// Serial console (115200):  cal <mm>   calibrate after pulling exactly <mm> of paper
+// Serial console (115200):  enc        toggle a live encoder readout (wiring check)
+//                           cal <mm>   calibrate after pulling exactly <mm> of paper
 //                           newroll    reset the roll counter
 //                           sync       force a server sync now
 //                           status     print state
@@ -60,6 +61,7 @@ static uint8_t  cursor = 0;              // next item to read from the bulletin
 static bool     low_paper_said = false;
 static uint32_t button_down_ms = 0;
 static bool     button_was_down = false;
+static bool     enc_debug = false;      // console 'enc' toggles a live count readout
 
 // ---- Played-item memory: nothing repeats within twelve hours -------------------
 // The server already excludes items a holder reported as played; this is the
@@ -144,6 +146,10 @@ static void handle_serial() {
     cal_start_count = encoder.getCount();
   } else if (line == "newroll") {
     new_roll();
+  } else if (line == "enc") {
+    enc_debug = !enc_debug;
+    Serial.printf("[enc] live readout %s. Pins now A(%d)=%d B(%d)=%d, count %lld\n", enc_debug ? "ON" : "off",
+                  PIN_ENC_A, digitalRead(PIN_ENC_A), PIN_ENC_B, digitalRead(PIN_ENC_B), (long long)encoder.getCount());
   } else if (line == "sync") {
     net::request_now();
   } else if (line == "status") {
@@ -187,7 +193,7 @@ void setup() {
   // a second layer behind the 10 k / 10 nF RC debounce on the board.
   ESP32Encoder::useInternalWeakPullResistors = puType::up;
   encoder.attachFullQuad(PIN_ENC_A, PIN_ENC_B);
-  encoder.setFilter(1023);
+  encoder.setFilter(1000);   // 12.5 µs glitch filter (1023 is just over the S2's hardware limit)
   encoder.clearCount();
   last_count = 0;
 
@@ -214,6 +220,10 @@ void loop() {
     d = -d;
 #endif
     engine.feed((float)d * mm_per_count, now);
+    if (enc_debug && d) {
+      static uint32_t last_print = 0;
+      if (now - last_print > 80) { Serial.printf("[enc] %+lld counts (%.1f mm)  total %lld\n", (long long)d, d * mm_per_count, (long long)c); last_print = now; }
+    }
 
     bs::Event e;
     while (engine.next_event(e)) {
