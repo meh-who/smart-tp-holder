@@ -249,36 +249,50 @@ void service_beat() {
 }
 
 // ---- bulletin + media ------------------------------------------------------------
+// The S2 Feather's filesystem is about 1.9 MB and a clip is ~100 KB, so a full
+// 24-item bulletin does not fit: the holder keeps as many as there is room for.
+constexpr size_t kFsReserve = 160 * 1024;   // room for one more clip plus LittleFS's own spare blocks
+
+enum class Got : uint8_t { CACHED, DOWNLOADED, NO_ROOM, FAILED };
+
 // Download a file to LittleFS. Content-addressed names mean a file that exists
 // is already correct, so this is skipped when it is present.
-bool download(const char* file, const char* path) {
-  if (LittleFS.exists(path)) return true;
+Got download(const char* file, const char* path) {
+  if (LittleFS.exists(path)) return Got::CACHED;
   String tmp = String(path) + ".part";
   for (int attempt = 0; attempt < 2; ++attempt) {
     wait_quiet();
     service_beat();
+    if (LittleFS.totalBytes() - LittleFS.usedBytes() < kFsReserve) return Got::NO_ROOM;
     File f = LittleFS.open(tmp, "w");
-    if (!f) { Serial.printf("[sync] can't write %s (filesystem full or not mounted?)\n", tmp.c_str()); return false; }
+    if (!f) { Serial.printf("[sync] can't write %s (filesystem not mounted?)\n", tmp.c_str()); return Got::FAILED; }
     int code = send(String("/media/") + file, nullptr, nullptr, &f);
     f.close();
-    if (code == HTTP_CODE_OK) { LittleFS.rename(tmp, path); return true; }
+    if (code == HTTP_CODE_OK) { LittleFS.rename(tmp, path); return Got::DOWNLOADED; }
     LittleFS.remove(tmp);
-    if (code > 0) { Serial.printf("[sync] /media/%s -> %d\n", file, code); return false; }   // 404 and the like: don't retry
+    if (code > 0) { Serial.printf("[sync] /media/%s -> %d\n", file, code); return Got::FAILED; }   // 404 and the like: don't retry
   }
-  return false;
+  return Got::FAILED;
 }
 
-// Remove cached MP3s not referenced by the new bulletin so the 6 MB partition
-// never fills. System clips are kept across sources.
-void sweep(const Bulletin& b) {
+// Remove cached MP3s (and half-downloaded .part files) the new bulletin does not
+// use: neither one of its items nor one of its system clips. (System clips are
+// content-hashed like everything else; an old version looked for a "sys_"
+// prefix the server never used, so it deleted them after every download.)
+// Returns how many files went.
+int sweep(const Bulletin& b) {
   File dir = LittleFS.open("/m");
-  if (!dir) return;
+  if (!dir) return 0;
+  const char* sys[] = {b.sys_switch, b.sys_low, b.sys_newroll, b.sys_offline, b.sys_empty};
+  int removed = 0;
   for (File f = dir.openNextFile(); f; f = dir.openNextFile()) {
     String p = String("/m/") + f.name();
-    bool keep = p.indexOf("sys_") >= 0;
+    bool keep = false;
+    for (const char* s : sys) keep = keep || p == s;
     for (uint8_t i = 0; i < b.count && !keep; ++i) keep = p == b.items[i].file;
-    if (!keep) { String del = p; f.close(); LittleFS.remove(del); }
+    if (!keep) { String del = p; f.close(); if (LittleFS.remove(del)) ++removed; }
   }
+  return removed;
 }
 
 // Not got (all of) it: try again later, backing off from 10 s to 5 min.
@@ -318,14 +332,22 @@ void fetch_bulletin() {
   strlcpy(b.source,  doc["source"]  | "news", sizeof b.source);
   strlcpy(b.source_label, doc["source_label"] | "", sizeof b.source_label);
   strlcpy(g_fetching_version, b.version, sizeof g_fetching_version);
-  bool complete = true;
+  uint8_t fresh = 0;                       // files downloaded this time
+  bool failed = false, no_room = false;
+  auto get = [&](const char* file, const char* path) {
+    Got g = download(file, path);
+    if (g == Got::DOWNLOADED) ++fresh;
+    if (g == Got::NO_ROOM) no_room = true;
+    if (g == Got::FAILED) failed = true;
+    return g == Got::CACHED || g == Got::DOWNLOADED;
+  };
 
   auto sysclip = [&](const char* key, char* dst) {
     const char* file = doc["system"][key] | "";
     dst[0] = 0;
     if (!*file) return;
     char path[40]; snprintf(path, sizeof path, "/m/%s", file);
-    if (download(file, path)) strlcpy(dst, path, 40); else complete = false;
+    if (get(file, path)) strlcpy(dst, path, 40);
   };
   sysclip("switch",   b.sys_switch);
   sysclip("low_paper",b.sys_low);
@@ -344,12 +366,15 @@ void fetch_bulletin() {
     strlcpy(x.id, it["id"] | "", sizeof x.id);
     snprintf(x.file, sizeof x.file, "/m/%s", file);
     x.duration_ms = it["duration_ms"] | 4000;
-    if (!download(file, x.file)) { complete = false; continue; }   // speak what we have; fetch the rest later
+    if (!get(file, x.file)) continue;      // speak what we have; fetch the rest later
     ++b.count;
   }
-  sweep(b);
-  Serial.printf("[sync] bulletin %s: %u of %u items from %s%s\n", b.version, b.count, listed, b.source,
-                complete ? "" : " (incomplete, will retry)");
+  int swept = sweep(b);
+  // Out of room: worth another go only if this pass made progress or freed space
+  // (the previous bulletin's clips); otherwise this is as much as fits.
+  bool complete = !failed && !(no_room && (fresh > 0 || swept > 0));
+  Serial.printf("[sync] bulletin %s: %u of %u items from %s%s%s\n", b.version, b.count, listed, b.source,
+                no_room ? " (storage full)" : "", complete ? "" : ", will fetch the rest later");
 
   xSemaphoreTake(g_mutex, portMAX_DELAY);
   g_pending = b;
