@@ -1,5 +1,9 @@
 // holder.ino — (S)wipable, Scrollable, Flushable: firmware for the toilet-roll
-// holder. Adafruit ESP32-S2 Feather (also HUZZAH32 / ESP32-S3). Revision 2.1.
+// holder. Adafruit ESP32-S2 Feather (also HUZZAH32 / ESP32-S3). Revision 2.2.
+//
+// 2.2: the companion page counts down live. Sheets are counted as the paper
+//      moves (not only once it has been still for 1.5 s), each change is
+//      reported straight away over a kept-alive connection, even mid-sentence.
 //
 // What changed from Revision C:
 //   * The holder is mains-powered in the gallery, so it stays online and asks
@@ -121,11 +125,26 @@ static void adopt_bulletin(const Bulletin& b, bool announce_switch) {
   }
 }
 
+// ---- Live sheet count ------------------------------------------------------------
+// A pull is charged to the roll when its session ends (paper still for 1.5 s).
+// The page should not wait for that, so it is shown the roll so far plus the
+// pull in progress, rounded the way SESSION_ENDED will charge it, so the number
+// does not jump when the session closes. Each change is reported straight away.
+static uint32_t sheets_for(float travel_mm) {
+  const float sheet = engine.config().sheet_mm;
+  return travel_mm > 0 ? (uint32_t)((travel_mm + sheet / 2) / sheet) : 0;
+}
+static void refresh_live_count() {
+  uint32_t live = status.sheets_this_roll + (engine.in_session() ? sheets_for(engine.travel_mm()) : 0);
+  if (live != status.sheets_live) { status.sheets_live = live; net::request_now(); }
+}
+
 // ---- New roll: the button, the serial console and the companion page all land here.
 static void new_roll() {
   status.sheets_this_roll = 0;
   low_paper_said = false;
   prefs.putUInt("roll", 0);
+  refresh_live_count();
   if (bulletin.sys_newroll[0]) player.play_now(bulletin.sys_newroll, 2000);
   Serial.println("[holder] new roll: count reset to 0");
   net::request_now();                // tell the page promptly
@@ -188,6 +207,7 @@ void setup() {
   mm_per_count = prefs.getFloat("mmpc", MM_PER_COUNT_DEFAULT);
   status.sheets_total = prefs.getUInt("total", 0);
   status.sheets_this_roll = prefs.getUInt("roll", 0);
+  status.sheets_live = status.sheets_this_roll;
 
   // Quadrature on the PCNT peripheral, x4, with the hardware glitch filter as
   // a second layer behind the 10 k / 10 nF RC debounce on the board.
@@ -239,7 +259,7 @@ void loop() {
           break;
         case bs::EventType::SESSION_ENDED: {
           // Charge the roll for what was pulled (whole sheets, rounded).
-          uint32_t sheets = (uint32_t)((e.travel_mm + engine.config().sheet_mm / 2) / engine.config().sheet_mm);
+          uint32_t sheets = sheets_for(e.travel_mm);
           status.sheets_this_roll += sheets;
           status.sheets_total += sheets;
           prefs.putUInt("roll", status.sheets_this_roll);
@@ -253,6 +273,7 @@ void loop() {
         default: break;
       }
     }
+    refresh_live_count();
   }
 
   // A new bulletin from the sync task?

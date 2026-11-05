@@ -31,6 +31,10 @@
 #define MAINS_POWERED   1
 #define POLL_MAINS_S    20
 #define POLL_BATTERY_S  3600
+// On top of that, each sheet pulled is reported straight away so the companion
+// page counts down live, at most one report per MIN_BEAT_MS. (While a phone has
+// the page open the server also asks for a beat every couple of seconds.)
+#define MIN_BEAT_MS     500
 
 // ---- Pins -------------------------------------------------------------------
 // Picked automatically from the board you select in the Arduino IDE.
@@ -89,4 +93,4 @@
 #define GAIN_DB          0.0f    // software trim. Hardware: GAIN open = 9 dB, GAIN to GND = 12 dB
 
 // ---- Firmware -----------------------------------------------------------------
-#define FW_VERSION "2.1"
+#define FW_VERSION "2.2"

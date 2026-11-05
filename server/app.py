@@ -4,7 +4,7 @@
 
 Phone side (opened by tapping the NFC tag, URL = PUBLIC_URL/r/<holder_id>):
   GET  /r/{holder_id}                  the page
-  GET  /api/holder/{id}/status         connection status + services (polled every 5 s)
+  GET  /api/holder/{id}/status         connection status + services (polled every 1 s)
   POST /api/holder/{id}/source         {"source": "news"|"x"|"tiktok"|"reels"}
   POST /api/holder/{id}/disconnect     {"provider": ...}
   GET  /auth/{provider}/start?holder=  OAuth redirect
@@ -32,6 +32,13 @@ import tts
 HERE = os.path.dirname(os.path.abspath(__file__))
 POLL_S = int(os.environ.get("HOLDER_POLL_S", "20"))
 ONLINE_WINDOW_S = POLL_S * 2 + 10
+# While a phone has the companion page open, ask the holder to check in this
+# often instead, so the page stays live (roll, feed, New roll) and the holder's
+# kept-alive connection stays warm. The holder also reports each sheet as it is
+# pulled, whatever this is.
+WATCH_POLL_S = int(os.environ.get("HOLDER_WATCH_POLL_S", "2"))
+WATCH_WINDOW_S = 15
+_watched = {}   # holder id -> time the page last polled /status (one uvicorn worker)
 
 app = FastAPI(title="toilet roll holder — companion", docs_url=None, redoc_url=None)
 db.init()
@@ -107,6 +114,7 @@ def page(hid: str, response: Response):
 def status(hid: str, request: Request):
     h = _holder_or_404(hid)
     _check_session(request, hid)
+    _watched[hid] = time.time()
     ts, hb = db.get_heartbeat(hid)
     b = db.get_bulletin(hid)
     online = bool(ts and time.time() - ts < ONLINE_WINDOW_S)
@@ -229,7 +237,7 @@ async def heartbeat(hid: str, request: Request):
             "bulletin": b["version"] if ready else "",
             "page_open_ts": h.get("last_page_open") or 0,
             "roll_reset_ts": h.get("roll_reset_ts") or 0,
-            "poll_s": POLL_S}
+            "poll_s": WATCH_POLL_S if time.time() - _watched.get(hid, 0) < WATCH_WINDOW_S else POLL_S}
 
 
 @app.get("/api/holder/{hid}/bulletin")

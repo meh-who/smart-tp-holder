@@ -23,6 +23,13 @@ double             g_page_open_ts = 0;      // server timestamp of the last comp
 volatile bool      g_phone_tapped = false;
 double             g_roll_reset_seen = 0;   // last "New roll" request applied (server timestamp)
 double             g_roll_reset_pending = 0;
+// Heartbeats go over one kept-alive TLS connection. The handshake is the
+// expensive part on the S2, so once it is open a beat costs a few milliseconds
+// of CPU and can go out mid-sentence; only a reconnect waits for quiet.
+WiFiClientSecure   g_tls;
+HTTPClient         g_beat;
+uint32_t           g_fs_free_kb = 0;        // refreshed only while silent (it walks the filesystem)
+bool               g_fs_known = false;
 
 String url(const char* path) { return String(SERVER_URL) + path; }
 
@@ -88,6 +95,7 @@ void sweep(const Bulletin& b) {
 }
 
 bool fetch_bulletin(const char* version_hint) {
+  wait_quiet();                       // heartbeats can now run mid-sentence; downloads still wait
   WiFiClientSecure client; make_client(client);
   HTTPClient http; http.begin(client, url("/api/holder/" HOLDER_ID "/bulletin"));
   http.addHeader("X-Holder-Key", HOLDER_KEY);
@@ -139,14 +147,15 @@ bool fetch_bulletin(const char* version_hint) {
   return true;
 }
 
-// POST telemetry; returns the poll interval the server asks for (0 on error).
-uint32_t heartbeat() {
+// The heartbeat body: telemetry plus the item ids spoken since the last beat.
+// `sent` is how many of those ids it carries, dropped once the server has them.
+String beat_body(uint8_t& sent) {
   JsonDocument doc;
   doc["fw"] = FW_VERSION;
   doc["uptime_s"] = millis() / 1000;
   doc["rssi"] = WiFi.RSSI();
   doc["sheets_total"] = g_status->sheets_total;
-  doc["sheets_this_roll"] = g_status->sheets_this_roll;
+  doc["sheets_this_roll"] = g_status->sheets_live;    // includes the pull in progress
   doc["roll_sheets"] = ROLL_SHEETS;
   doc["last_pull_s_ago"] = g_status->last_pull_ms ? (int32_t)((millis() - g_status->last_pull_ms) / 1000) : (int32_t)-1;  // signed: -1 = never
   doc["queued"] = g_status->queued;
@@ -158,22 +167,48 @@ uint32_t heartbeat() {
   xSemaphoreTake(g_mutex, portMAX_DELAY);
   JsonArray pl = doc["played"].to<JsonArray>();
   for (uint8_t i = 0; i < g_played_n; ++i) pl.add(g_played[i]);
-  uint8_t sent = g_played_n;
+  sent = g_played_n;
   xSemaphoreGive(g_mutex);
-  size_t total = 0, used = 0; total = LittleFS.totalBytes(); used = LittleFS.usedBytes();
-  doc["fs_free_kb"] = (total - used) / 1024;
+  // Free space walks the whole filesystem, which would hold up the MP3 reads,
+  // so it is only measured between clips and the last figure is sent otherwise.
+  if (!g_status->playing) {
+    size_t total = LittleFS.totalBytes(), used = LittleFS.usedBytes();
+    g_fs_free_kb = (total - used) / 1024; g_fs_known = true;
+  }
+  if (g_fs_known) doc["fs_free_kb"] = g_fs_free_kb;
   String body; serializeJson(doc, body);
+  return body;
+}
 
-  WiFiClientSecure client; make_client(client);
-  HTTPClient http; http.begin(client, url("/api/holder/" HOLDER_ID "/heartbeat"));
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("X-Holder-Key", HOLDER_KEY);
-  int code = http.POST(body);
+int post_beat(const String& body) {
+  g_beat.begin(g_tls, url("/api/holder/" HOLDER_ID "/heartbeat"));
+  g_beat.addHeader("Content-Type", "application/json");
+  g_beat.addHeader("X-Holder-Key", HOLDER_KEY);
+  return g_beat.POST(body);
+}
+
+// POST telemetry; returns the poll interval the server asks for (0 on error).
+uint32_t heartbeat() {
+  // A kept-alive connection can go out mid-sentence. A new one means a TLS
+  // handshake, which on the single-core S2 can make the voice stutter: wait.
+  bool warm = g_tls.connected();
+  if (!warm) wait_quiet();
+  g_poke = false;                     // anything that changes after this gets its own beat
+  uint8_t sent = 0;
+  int code = post_beat(beat_body(sent));
+  if (code < 0 && warm) {             // the server had dropped the idle connection: reconnect once
+    g_beat.end(); g_tls.stop();
+    wait_quiet();
+    g_poke = false;
+    code = post_beat(beat_body(sent));
+  }
   if (code != 200) {
     Serial.printf("[sync] heartbeat -> %d\n", code);
-    g_status->last_sync_error = code; http.end(); return 0;
+    g_status->last_sync_error = code; g_beat.end(); g_tls.stop(); return 0;
   }
-  JsonDocument r; deserializeJson(r, http.getStream()); http.end();
+  String reply = g_beat.getString();
+  g_beat.end();                       // the socket stays open for the next beat
+  JsonDocument r; deserializeJson(r, reply);
   g_status->last_sync_error = 0;
   g_status->last_sync_ms = millis();
   xSemaphoreTake(g_mutex, portMAX_DELAY);          // drop what the server now knows about
@@ -193,25 +228,34 @@ uint32_t heartbeat() {
   if (strcmp(want_version, g_current_version) != 0 || strcmp(want_source, g_current_source) != 0) {
     Serial.printf("[sync] server has %s (%s), we have %s (%s) -> fetching\n",
                   want_version, want_source, g_current_version, g_current_source);
+    g_tls.stop();                     // free the kept-alive TLS session's memory for the downloads
     fetch_bulletin(want_version);
   }
   return r["poll_s"] | (uint32_t)(MAINS_POWERED ? POLL_MAINS_S : POLL_BATTERY_S);
 }
 
 void task(void*) {
+  make_client(g_tls);
+  g_beat.setReuse(true);
+  uint32_t last_beat = 0;
   for (;;) {
     uint32_t wait_s = MAINS_POWERED ? POLL_MAINS_S : POLL_BATTERY_S;
     if (ensure_wifi()) {
       g_status->rssi = WiFi.RSSI();
-      wait_quiet();
+      last_beat = millis();
       uint32_t p = heartbeat();
       if (p) wait_s = p; else g_status->online = false;
     } else {
       g_status->online = false;
+      g_tls.stop();
       wait_s = 30;
     }
-    for (uint32_t i = 0; i < wait_s * 10 && !g_poke; ++i) vTaskDelay(pdMS_TO_TICKS(100));
-    g_poke = false;
+    // Sleep until the next scheduled beat, or until poked: a sheet was pulled,
+    // the button was pressed, or the bulletin ran out.
+    uint32_t slept_from = millis();
+    while (millis() - slept_from < wait_s * 1000UL && !g_poke) vTaskDelay(pdMS_TO_TICKS(20));
+    // However fast the paper moves, at most one beat per MIN_BEAT_MS.
+    while (millis() - last_beat < MIN_BEAT_MS) vTaskDelay(pdMS_TO_TICKS(20));
   }
 }
 
