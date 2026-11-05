@@ -52,7 +52,8 @@ struct SerialT {
   void println(const char* s) { puts(s); }
 };
 extern SerialT Serial;
-struct EspT { uint32_t getFreeHeap() { return 120000; } uint32_t getMinFreeHeap() { return 90000; } };
+struct RestartSignal {};
+struct EspT { uint32_t getFreeHeap() { return 120000; } uint32_t getMinFreeHeap() { return 90000; } [[noreturn]] void restart() { throw RestartSignal(); } };
 extern EspT ESP;
 
 // FreeRTOS
@@ -65,3 +66,4 @@ inline int xSemaphoreTake(SemaphoreHandle_t, uint32_t) { return 1; }
 inline int xSemaphoreGive(SemaphoreHandle_t) { return 1; }
 void vTaskDelay(uint32_t ms);
 inline int xTaskCreatePinnedToCore(void (*)(void*), const char*, uint32_t, void*, int, TaskHandle_t*, int) { return 1; }
+inline uint32_t uxTaskGetStackHighWaterMark(TaskHandle_t) { return 9000; }

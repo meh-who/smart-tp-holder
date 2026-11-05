@@ -1,6 +1,10 @@
 // holder.ino — (S)wipable, Scrollable, Flushable: firmware for the toilet-roll
-// holder. Adafruit ESP32-S2 Feather (also HUZZAH32 / ESP32-S3). Revision 2.3.
+// holder. Adafruit ESP32-S2 Feather (also HUZZAH32 / ESP32-S3). Revision 2.4.
 //
+// 2.4: keeps the S2's internal RAM in large pieces so TLS can always reconnect
+//      (MP3 decoder buffers allocated once, bulletins and JSON in PSRAM), takes
+//      each clip into PSRAM before writing it to flash, and restarts itself while
+//      idle if it still cannot reconnect.
 // 2.3: one kept-alive connection for everything (one TLS handshake, not one
 //      per MP3; one TLS session's worth of RAM), heartbeats keep going while a
 //      bulletin downloads, missing files are retried, and the heartbeat reports

@@ -8,6 +8,7 @@
 #include <random>
 #include "WiFi.h"
 SerialT Serial; EspT ESP; WiFiClass WiFi;
+size_t g_fake_internal_free = 62000, g_fake_internal_block = 31000; int g_fake_wifi_rejoins = 0;
 #include "LittleFS.h"
 FakeFS g_fs; LittleFSClass LittleFS;
 size_t FakeFS::used() const { size_t u = 8 * 4096; for (auto& kv : files) u += ((kv.second.size() + 4095) / 4096 + 1) * 4096; return u; }
@@ -93,6 +94,16 @@ FakeResponse fake_request(WiFiClientSecure&, const std::string& method, const st
   }
   return {404, "", true};
 }
+static bool s_cut = false;
+int FakeBodyStream::available() {
+  if (p == 0) { std::uniform_real_distribution<double> u(0, 1); s_cut = u(rng) < S.media_fail && b.size() > 50000; }
+  if (s_cut && p > b.size() / 2) { S.up = false; return 0; }
+  size_t n = std::min<size_t>(4096, b.size() - p);
+  if (n) advance((uint64_t)(n / 1000.0 / S.kb_per_ms) + 1);
+  return (int)n;
+}
+int FakeBodyStream::read(uint8_t* buf, size_t n) { n = std::min(n, b.size() - p); memcpy(buf, b.data() + p, n); p += n; return (int)n; }
+uint8_t FakeBodyStream::connected() { return S.up; }
 int fake_stream_body(const std::string& body, Stream* sink) {
   size_t done = 0;
   std::uniform_real_distribution<double> u(0, 1);
@@ -108,9 +119,10 @@ int fake_stream_body(const std::string& body, Stream* sink) {
 }
 
 // ---- run + report --------------------------------------------------------------
+static int restarts = 0; static uint64_t first_restart = 0;
 static void run(uint64_t until) {
   g_end = until;
-  try { task(nullptr); } catch (SimEnd&) {}
+  try { task(nullptr); } catch (SimEnd&) {} catch (RestartSignal&) { ++restarts; if (!first_restart) first_restart = g_now; }
 }
 static void report(const char* name, uint64_t from_ms = 0) {
   std::vector<double> lat;
@@ -126,6 +138,8 @@ static void report(const char* name, uint64_t from_ms = 0) {
   size_t cached = 0; for (auto& kv : g_fs.files) if (kv.first.rfind("/m/", 0) == 0 && !String(kv.first.c_str()).endsWith(".part")) ++cached;
   printf("\n== %s\n   sheets pulled %zu: reached server in avg %.2f s, worst %.2f s, never %d\n", name, lat.size(), lat.empty() ? 0 : sum / std::max<size_t>(1, lat.size() - never), worst, never);
   printf("   longest gap between heartbeats %.1f s | beats %d, handshakes %d, bulletin GETs %d, media GETs %d\n", gap, S.beat_posts, S.handshakes, S.bulletin_gets, S.media_gets);
+  if (restarts) printf("   self-restart at %.1f s (connect failures %u, WiFi rejoins %d)\n", first_restart / 1000.0, g_connect_failures, g_fake_wifi_rejoins);
+  else printf("   no self-restart (connect failures %u, WiFi rejoins %d)\n", g_connect_failures, g_fake_wifi_rejoins);
   printf("   holder has %s, %u items handed over, %zu files cached, fs used %zu / %zu KB, fetch attempts %u, wanted %d\n",
          g_current_version, g_items_cached, cached, g_fs.used() / 1024, g_fs.capacity / 1024, g_fetch_attempts, g_fetch_wanted);
 }
@@ -154,6 +168,20 @@ int main(int argc, char** argv) {
     S.media_fail = 0.25; S.missing = {"100-abcc3.mp3"}; S.fail_connects = 2;
     pulls = {{20000, 30000, 1.0}};
     run(900000); report("25% of downloads cut off, one clip missing (404), first two connects fail");
+  } else if (sc == "fragmented") {
+    // Running fine, then the connection drops and the heap is too broken up for a new TLS session.
+    run(150000);
+    S.beats.clear(); changes.clear(); S.handshakes = S.media_gets = S.bulletin_gets = S.beat_posts = 0;
+    g_fake_internal_free = 46000; g_fake_internal_block = 12000;
+    S.up = false; S.fail_connects = 1000;
+    pulls = {{152000, 158000, 1.0}};
+    run(400000); report("connection lost, internal heap too fragmented to reconnect (visitor pulling)", 150000);
+  } else if (sc == "outage") {
+    // Plenty of memory, but the internet is down: rejoin WiFi first, restart only as a last resort.
+    run(150000);
+    S.beats.clear(); changes.clear(); S.handshakes = S.media_gets = S.bulletin_gets = S.beat_posts = 0;
+    S.up = false; S.fail_connects = 1000;
+    run(900000); report("internet down for 12 minutes, memory fine", 150000);
   } else if (sc == "rebuild") {
     run(150000);
     S.beats.clear(); changes.clear(); S.handshakes = S.media_gets = S.bulletin_gets = S.beat_posts = 0;

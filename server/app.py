@@ -152,8 +152,10 @@ def status(hid: str, request: Request):
         "services": _services(hid),
         "poll_s": POLL_S,
         # Holder diagnostics (fw 2.2+): restarts, memory, what it has cached and is downloading.
-        "telemetry": {k: hb.get(k) for k in ("uptime_s", "reset", "items", "fetching", "fetch_attempts",
-                                             "heap", "heap_min", "fs_free_kb", "last_error", "queued")},
+        "telemetry": {k: hb.get(k) for k in ("uptime_s", "reset", "self_restarts", "items", "fetching",
+                                             "fetch_attempts", "connect_failures", "heap", "heap_min",
+                                             "heap_block", "psram_free", "stack_free", "fs_free_kb",
+                                             "last_error", "queued")},
     }
 
 

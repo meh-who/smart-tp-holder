@@ -1,6 +1,7 @@
 // player.cpp
 #include "player.h"
 #include "config.h"
+#include <esp_heap_caps.h>
 
 void Player::begin() {
   pinMode(PIN_AMP_SD, OUTPUT);
@@ -9,7 +10,14 @@ void Player::begin() {
   out_->SetPinout(PIN_I2S_BCLK, PIN_I2S_LRC, PIN_I2S_DIN);
   out_->SetOutputModeMono(true);
   out_->SetGain(powf(10.0f, GAIN_DB / 20.0f));
-  mp3_ = new AudioGeneratorMP3();
+  // The decoder's buffers are allocated once, in PSRAM where the board has it,
+  // and the file reader is reused. Allocating them for every clip broke up the
+  // internal RAM a TLS connection needs, until the holder could not reconnect.
+  const int need = AudioGeneratorMP3::preAllocSize();
+  mp3_space_ = heap_caps_malloc(need, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  if (!mp3_space_) mp3_space_ = malloc(need);
+  mp3_ = mp3_space_ ? new AudioGeneratorMP3(mp3_space_, need) : new AudioGeneratorMP3();
+  file_ = new AudioFileSourceLittleFS();
 }
 
 void Player::amp(bool on) {
@@ -52,10 +60,10 @@ void Player::clear() { stop(); head_ = tail_ = count_ = 0; }
 void Player::start(const QueuedClip& c) {
   if (!LittleFS.exists(c.path)) { Serial.printf("[player] missing %s\n", c.path); return; }
   amp(true);
-  file_ = new AudioFileSourceLittleFS(c.path);
+  if (!file_->open(c.path)) { Serial.printf("[player] cannot open %s\n", c.path); return; }
   if (!mp3_->begin(file_, out_)) {
     Serial.printf("[player] cannot start %s\n", c.path);
-    delete file_; file_ = nullptr;
+    file_->close();
     return;
   }
   started_ms_ = millis(); current_ms_ = c.duration_ms;
@@ -66,8 +74,8 @@ void Player::start(const QueuedClip& c) {
 }
 
 void Player::stop() {
-  if (mp3_ && mp3_->isRunning()) mp3_->stop();
-  if (file_) { delete file_; file_ = nullptr; }
+  if (mp3_ && mp3_->isRunning()) mp3_->stop();     // closes the file as well
+  if (file_ && file_->isOpen()) file_->close();
 }
 
 void Player::loop() {

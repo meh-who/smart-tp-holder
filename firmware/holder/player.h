@@ -43,8 +43,9 @@ class Player {
   QueuedClip q_[kQ];
   uint8_t head_ = 0, tail_ = 0, count_ = 0;
 
-  AudioFileSourceLittleFS* file_ = nullptr;
+  AudioFileSourceLittleFS* file_ = nullptr;   // one reader, reopened for each clip
   AudioGeneratorMP3*       mp3_  = nullptr;
+  void*                    mp3_space_ = nullptr;   // the decoder's buffers, allocated once
   AudioOutputI2S*          out_  = nullptr;
   uint32_t                 started_ms_ = 0, current_ms_ = 0;
   char                     last_item_id_[24] = "";

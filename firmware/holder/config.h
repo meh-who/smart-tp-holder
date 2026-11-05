@@ -93,4 +93,4 @@
 #define GAIN_DB          0.0f    // software trim. Hardware: GAIN open = 9 dB, GAIN to GND = 12 dB
 
 // ---- Firmware -----------------------------------------------------------------
-#define FW_VERSION "2.3"
+#define FW_VERSION "2.4"

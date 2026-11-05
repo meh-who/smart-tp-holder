@@ -7,12 +7,38 @@
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <esp_system.h>
+#include <esp_heap_caps.h>
+#include <esp_attr.h>
+#include <new>
+
+// Survive a software restart (not a power cut): how often the holder has had to
+// restart itself to get back online, reported in every heartbeat.
+RTC_NOINIT_ATTR static uint32_t s_rtc_magic;
+RTC_NOINIT_ATTR static uint32_t s_heal_total;     // self-restarts since power-on
+RTC_NOINIT_ATTR static uint8_t  s_heal_streak;    // self-restarts without a heartbeat getting through
 
 namespace {
 
+// Internal RAM is the scarce thing on the S2: about 55 KB is left with WiFi and
+// audio running, and a TLS connection needs ~40 KB of it, including two ~17 KB
+// blocks in one piece. Everything big or long-lived therefore goes to PSRAM
+// (2 MB on the Feather), so the internal heap stays in large pieces.
+void* ps_alloc(size_t n) {
+  void* p = heap_caps_malloc(n, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  return p ? p : malloc(n);
+}
+struct PsramJson : ArduinoJson::Allocator {
+  void* allocate(size_t n) override { return ps_alloc(n); }
+  void deallocate(void* p) override { free(p); }
+  void* reallocate(void* p, size_t n) override {
+    void* q = heap_caps_realloc(p, n, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    return q ? q : realloc(p, n);
+  }
+} g_json_alloc;
+
 HolderStatus*      g_status = nullptr;
 SemaphoreHandle_t  g_mutex;
-Bulletin           g_pending;          // built by the task, handed to the main loop
+Bulletin*          g_pending = nullptr;  // built by the task, handed to the main loop (PSRAM)
 bool               g_pending_ready = false;
 bool               g_pending_switch = false;
 char               g_current_version[40] = "";
@@ -33,7 +59,13 @@ double             g_roll_reset_pending = 0;
 // page never freezes.
 WiFiClientSecure   g_tls;
 HTTPClient         g_http;
-Bulletin           g_build;                    // being downloaded (too big for the task's stack)
+Bulletin*          g_build = nullptr;          // being downloaded (PSRAM)
+uint8_t*           g_dl_buf = nullptr;         // a whole clip is received here before it touches flash (PSRAM)
+constexpr size_t   kDlCap = 256 * 1024;
+uint8_t            g_connect_failures = 0;     // consecutive requests that could not open a connection
+bool               g_wifi_bounced = false;
+uint8_t            g_failures_at_bounce = 0;
+uint32_t           g_stack_free = 0;           // the sync task's stack high-water mark, bytes
 char               g_want_version[40] = "";    // the bulletin the server last advertised
 char               g_fetching_version[40] = "";
 bool               g_fetch_wanted = false;
@@ -105,18 +137,48 @@ bool ensure_wifi() {
   return ok;
 }
 
-// One request over the shared connection. On 200 the body goes to `reply` or
-// `sink`; any other answer's body is read and dropped so the connection stays
-// usable. Returns the HTTP status, or a negative HTTPClient error, in which
-// case the connection is closed and the next request opens a new one.
-int send(const String& path, const String* post_body, String* reply, Stream* sink = nullptr) {
+// Read a response body (with a Content-Length, which the server always sends)
+// straight into `buf`, without HTTPClient's per-call 4 KB buffer.
+int read_body(uint8_t* buf, size_t cap, size_t* got) {
+  int size = g_http.getSize();
+  if (size < 0) return HTTPC_ERROR_ENCODING;
+  if ((size_t)size > cap) return HTTPC_ERROR_TOO_LESS_RAM;
+  auto* s = g_http.getStreamPtr();
+  if (!s) return HTTPC_ERROR_NOT_CONNECTED;
+  size_t done = 0;
+  uint32_t last = millis();
+  while (done < (size_t)size) {
+    int avail = s->available();
+    if (avail > 0) {
+      size_t want = (size_t)size - done;
+      int r = s->read(buf + done, (size_t)avail < want ? (size_t)avail : want);
+      if (r > 0) { done += r; last = millis(); continue; }
+    }
+    if (!s->connected() && s->available() <= 0) return HTTPC_ERROR_CONNECTION_LOST;
+    if (millis() - last > 15000) return HTTPC_ERROR_READ_TIMEOUT;
+    vTaskDelay(pdMS_TO_TICKS(2));
+  }
+  *got = done;
+  return (int)done;
+}
+
+// One request over the shared connection. On 200 the body goes to `reply`,
+// `sink`, or g_dl_buf (when `got` is given); any other answer's body is read
+// and dropped so the connection stays usable. Returns the HTTP status, or a
+// negative HTTPClient error, in which case the connection is closed and the
+// next request opens a new one.
+int send(const String& path, const String* post_body, String* reply, Stream* sink = nullptr, size_t* got = nullptr) {
+  bool was_open = g_tls.connected();
   int code = HTTPC_ERROR_CONNECTION_REFUSED;
   if (g_http.begin(g_tls, url(path))) {
     g_http.addHeader("X-Holder-Key", HOLDER_KEY);
     if (post_body) { g_http.addHeader("Content-Type", "application/json"); code = g_http.POST(*post_body); }
     else           code = g_http.GET();
     if (code == HTTP_CODE_OK) {
-      if (sink) {
+      if (got) {
+        int n = read_body(g_dl_buf, kDlCap, got);
+        if (n < 0) code = n;
+      } else if (sink) {
         int size = g_http.getSize();
         int n = g_http.writeToStream(sink);
         if (n < 0) code = n;
@@ -131,11 +193,15 @@ int send(const String& path, const String* post_body, String* reply, Stream* sin
   if (code < 0) {
     char err[96] = "";
     g_tls.lastError(err, sizeof err);
-    Serial.printf("[sync] %s -> %d %s | tls: %s | heap %u\n", path.c_str(), code,
-                  HTTPClient::errorToString(code).c_str(), err, (unsigned)ESP.getFreeHeap());
+    Serial.printf("[sync] %s -> %d %s | tls: %s | internal heap %u, largest block %u\n", path.c_str(), code,
+                  HTTPClient::errorToString(code).c_str(), err,
+                  (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+                  (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
   }
   g_http.end();                            // keeps the socket open when the server allows it
   if (code < 0) g_tls.stop();
+  if (code > 0) { g_connect_failures = 0; g_wifi_bounced = false; }
+  else if (!was_open && g_connect_failures < 255) ++g_connect_failures;
   return code;
 }
 
@@ -143,7 +209,7 @@ int send(const String& path, const String* post_body, String* reply, Stream* sin
 // The body: telemetry plus the item ids spoken since the last beat. `sent` is
 // how many of those ids it carries, dropped once the server has them.
 String beat_body(uint8_t& sent) {
-  JsonDocument doc;
+  JsonDocument doc(&g_json_alloc);
   doc["fw"] = FW_VERSION;
   doc["uptime_s"] = millis() / 1000;
   int32_t rssi = WiFi.RSSI();
@@ -162,8 +228,13 @@ String beat_body(uint8_t& sent) {
   doc["fetch_attempts"] = g_fetch_attempts;
   doc["mains"] = MAINS_POWERED ? true : false;
   doc["roll_reset_seen"] = g_roll_reset_seen;
-  doc["heap"] = ESP.getFreeHeap();
-  doc["heap_min"] = ESP.getMinFreeHeap();
+  doc["heap"] = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+  doc["heap_min"] = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
+  doc["heap_block"] = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+  doc["psram_free"] = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+  doc["stack_free"] = g_stack_free;
+  doc["connect_failures"] = g_connect_failures;
+  doc["self_restarts"] = s_heal_total;
   doc["reset"] = reset_reason();
   doc["last_error"] = (int32_t)g_status->last_sync_error;
   xSemaphoreTake(g_mutex, portMAX_DELAY);
@@ -198,7 +269,8 @@ void heartbeat() {
     g_next_beat_ms = millis() + (warm && code < 0 ? 0 : 5000);
     return;
   }
-  JsonDocument r; deserializeJson(r, reply);
+  JsonDocument r(&g_json_alloc); deserializeJson(r, reply);
+  s_heal_streak = 0;
   g_status->last_sync_error = 0;
   g_status->last_sync_ms = millis();
   g_status->online = true;
@@ -264,6 +336,26 @@ Got download(const char* file, const char* path) {
     wait_quiet();
     service_beat();
     if (LittleFS.totalBytes() - LittleFS.usedBytes() < kFsReserve) return Got::NO_ROOM;
+    if (g_dl_buf) {
+      // Receive the whole clip into PSRAM first and write it to flash after:
+      // flash writes stall the CPU (and the WiFi stack's buffers), and doing them
+      // while the data is still arriving is what made downloads time out.
+      size_t n = 0;
+      int code = send(String("/media/") + file, nullptr, nullptr, nullptr, &n);
+      if (code == HTTP_CODE_OK) {
+        wait_quiet();                      // a flash write mid-sentence makes the voice stutter
+        if (LittleFS.totalBytes() - LittleFS.usedBytes() < n + 16 * 1024) return Got::NO_ROOM;
+        File f = LittleFS.open(tmp, "w");
+        if (!f) { Serial.printf("[sync] can't write %s (filesystem not mounted?)\n", tmp.c_str()); return Got::FAILED; }
+        size_t w = f.write(g_dl_buf, n);
+        f.close();
+        if (w == n) { LittleFS.rename(tmp, path); return Got::DOWNLOADED; }
+        LittleFS.remove(tmp);
+        return Got::NO_ROOM;               // a short write: the filesystem is full
+      }
+      if (code > 0) { Serial.printf("[sync] /media/%s -> %d\n", file, code); return Got::FAILED; }
+      continue;                            // the connection failed: once more on a new one
+    }
     File f = LittleFS.open(tmp, "w");
     if (!f) { Serial.printf("[sync] can't write %s (filesystem not mounted?)\n", tmp.c_str()); return Got::FAILED; }
     int code = send(String("/media/") + file, nullptr, nullptr, &f);
@@ -315,10 +407,10 @@ void fetch_bulletin() {
     if (code > 0) Serial.printf("[sync] bulletin -> %d\n", code);
     g_fetching = false; retry_fetch_later(); return;
   }
-  JsonDocument filter;                     // the item texts are for the page, not the holder
+  JsonDocument filter(&g_json_alloc);      // the item texts are for the page, not the holder
   filter["version"] = true; filter["source"] = true; filter["source_label"] = true; filter["system"] = true;
   filter["items"][0]["id"] = true; filter["items"][0]["file"] = true; filter["items"][0]["duration_ms"] = true;
-  JsonDocument doc;
+  JsonDocument doc(&g_json_alloc);
   DeserializationError err = deserializeJson(doc, body, DeserializationOption::Filter(filter));
   body = String();
   if (err) {
@@ -326,7 +418,7 @@ void fetch_bulletin() {
     g_fetching = false; retry_fetch_later(); return;
   }
 
-  Bulletin& b = g_build;
+  Bulletin& b = *g_build;
   b = Bulletin();
   strlcpy(b.version, doc["version"] | g_fetching_version, sizeof b.version);
   strlcpy(b.source,  doc["source"]  | "news", sizeof b.source);
@@ -358,7 +450,7 @@ void fetch_bulletin() {
   JsonArray items = doc["items"].as<JsonArray>();
   uint8_t listed = 0;
   for (JsonObject it : items) {
-    if (b.count >= 40) break;
+    if (b.count >= kMaxItems) break;
     BulletinItem& x = b.items[b.count];
     const char* file = it["file"] | "";
     if (!*file) continue;
@@ -377,7 +469,7 @@ void fetch_bulletin() {
                 no_room ? " (storage full)" : "", complete ? "" : ", will fetch the rest later");
 
   xSemaphoreTake(g_mutex, portMAX_DELAY);
-  g_pending = b;
+  *g_pending = b;
   g_pending_ready = true;
   g_pending_switch = strcmp(b.source, g_current_source) != 0 && g_current_source[0] != 0;
   strlcpy(g_current_version, b.version, sizeof g_current_version);
@@ -389,10 +481,55 @@ void fetch_bulletin() {
   g_poke = true;                           // tell the page what we now have
 }
 
+// Nothing is playing, queued or being pulled: a restart now goes unnoticed.
+bool idle_for_restart() {
+  return quiet() && g_status->queued == 0 &&
+         (g_status->last_pull_ms == 0 || millis() - g_status->last_pull_ms > 10000);
+}
+
+// When the connection cannot be reopened: first rejoin WiFi; if that does not
+// help, or the internal heap is too broken up for a TLS session (it needs two
+// ~17 KB blocks), restart the chip while idle. A fresh boot always has the
+// room, the clips and the counts are in flash, and it takes a few seconds.
+// Each self-restart that does not get a heartbeat through doubles the number
+// of failures before the next one, so a long internet outage does not turn
+// into a restart loop.
+void self_heal() {
+  if (g_connect_failures < 3) return;
+  size_t block = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+  size_t freeb = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+  bool starved = block < 24 * 1024 || freeb < 48 * 1024;
+  uint32_t need = 3UL << (s_heal_streak > 4 ? 4 : s_heal_streak);   // 3, 6, 12, 24, 48 failures
+  if (!starved) {
+    // Plenty of memory: probably the network. Rejoin WiFi first and give that
+    // a fair go before restarting.
+    if (!g_wifi_bounced) {
+      if (g_connect_failures < 4) return;
+      Serial.println("[sync] can't reach the server: rejoining WiFi");
+      g_wifi_bounced = true;
+      g_failures_at_bounce = g_connect_failures;
+      g_tls.stop();
+      WiFi.disconnect();                   // ensure_wifi() rejoins on the next pass
+      return;
+    }
+    if (g_connect_failures < g_failures_at_bounce + need) return;
+  } else if (g_connect_failures < need) {
+    return;
+  }
+  if (!idle_for_restart()) return;
+  Serial.printf("[sync] %u failed connections (internal heap %u, largest block %u): restarting to recover\n",
+                g_connect_failures, (unsigned)freeb, (unsigned)block);
+  ++s_heal_total; if (s_heal_streak < 250) ++s_heal_streak;
+  delay(200);
+  ESP.restart();
+}
+
 void task(void*) {
-  Serial.printf("[sync] last restart: %s\n", reset_reason());
+  Serial.printf("[sync] last restart: %s, self-restarts since power-on: %u\n", reset_reason(), (unsigned)s_heal_total);
   make_client(g_tls);
   g_http.setReuse(true);
+  g_http.setConnectTimeout(8000);
+  g_http.setTimeout(15000);                // a slow patch in a download is not a dead connection
   for (;;) {
     if (!ensure_wifi()) {
       g_status->online = false;
@@ -402,6 +539,8 @@ void task(void*) {
     }
     service_beat();
     if (g_fetch_wanted && !g_fetching && (int32_t)(millis() - g_fetch_not_before) >= 0) fetch_bulletin();
+    self_heal();
+    g_stack_free = uxTaskGetStackHighWaterMark(nullptr);
     vTaskDelay(pdMS_TO_TICKS(20));
   }
 }
@@ -413,11 +552,15 @@ namespace net {
 void begin(HolderStatus* status) {
   g_status = status;
   g_mutex = xSemaphoreCreateMutex();
+  if (s_rtc_magic != 0x7e11b0a5) { s_rtc_magic = 0x7e11b0a5; s_heal_total = 0; s_heal_streak = 0; }   // power-on
+  g_build   = new (ps_alloc(sizeof(Bulletin))) Bulletin();
+  g_pending = new (ps_alloc(sizeof(Bulletin))) Bulletin();
+  g_dl_buf  = (uint8_t*)heap_caps_malloc(kDlCap, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);   // no PSRAM: stream to flash instead
   LittleFS.mkdir("/m");
   // Load the last bulletin from flash so the holder speaks before WiFi is up.
   File f = LittleFS.open("/bulletin.json", "r");
   if (f) {
-    JsonDocument doc;
+    JsonDocument doc(&g_json_alloc);
     if (!deserializeJson(doc, f)) {
       strlcpy(g_current_version, doc["version"] | "", sizeof g_current_version);
       strlcpy(g_current_source,  doc["source"]  | "", sizeof g_current_source);
@@ -431,14 +574,14 @@ void begin(HolderStatus* status) {
 bool take_bulletin(Bulletin& out, bool& source_changed) {
   if (!g_pending_ready) return false;
   xSemaphoreTake(g_mutex, portMAX_DELAY);
-  out = g_pending;
+  out = *g_pending;
   source_changed = g_pending_switch;
   g_pending_ready = false; g_pending_switch = false;
   xSemaphoreGive(g_mutex);
   // Persist a tiny copy so the next boot knows what it has.
   File f = LittleFS.open("/bulletin.json", "w");
   if (f) {
-    JsonDocument doc;
+    JsonDocument doc(&g_json_alloc);
     doc["version"] = out.version; doc["source"] = out.source; doc["source_label"] = out.source_label;
     doc["sys_switch"] = out.sys_switch; doc["sys_low"] = out.sys_low; doc["sys_newroll"] = out.sys_newroll;
     doc["sys_offline"] = out.sys_offline; doc["sys_empty"] = out.sys_empty;
@@ -455,7 +598,7 @@ bool take_bulletin(Bulletin& out, bool& source_changed) {
 bool load_cached(Bulletin& out) {
   File f = LittleFS.open("/bulletin.json", "r");
   if (!f) return false;
-  JsonDocument doc;
+  JsonDocument doc(&g_json_alloc);
   bool ok = !deserializeJson(doc, f);
   f.close();
   if (!ok) return false;
@@ -468,8 +611,10 @@ bool load_cached(Bulletin& out) {
   strlcpy(b.sys_newroll, doc["sys_newroll"] | "", sizeof b.sys_newroll);
   strlcpy(b.sys_offline, doc["sys_offline"] | "", sizeof b.sys_offline);
   strlcpy(b.sys_empty,   doc["sys_empty"]   | "", sizeof b.sys_empty);
+  for (char* sys : {b.sys_switch, b.sys_low, b.sys_newroll, b.sys_offline, b.sys_empty})
+    if (sys[0] && !LittleFS.exists(sys)) sys[0] = 0;    // an older version deleted these after downloading
   for (JsonObject it : doc["items"].as<JsonArray>()) {
-    if (b.count >= 40) break;
+    if (b.count >= kMaxItems) break;
     BulletinItem& x = b.items[b.count];
     strlcpy(x.id, it["id"] | "", sizeof x.id);
     strlcpy(x.file, it["file"] | "", sizeof x.file);

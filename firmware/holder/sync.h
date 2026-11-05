@@ -24,12 +24,14 @@ struct BulletinItem {
   uint32_t duration_ms;
 };
 
+constexpr uint8_t kMaxItems = 24;  // the server never sends more
+
 struct Bulletin {
   char     version[40] = "";
   char     source[16]  = "";      // news | x | tiktok | reels
   char     source_label[32] = "";
   uint8_t  count = 0;
-  BulletinItem items[40];
+  BulletinItem items[kMaxItems];
   char     sys_switch[40]   = "";
   char     sys_low[40]      = "";
   char     sys_newroll[40]  = "";
