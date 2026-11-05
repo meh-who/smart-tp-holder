@@ -1,6 +1,10 @@
 // holder.ino — (S)wipable, Scrollable, Flushable: firmware for the toilet-roll
-// holder. Adafruit ESP32-S2 Feather (also HUZZAH32 / ESP32-S3). Revision 2.2.
+// holder. Adafruit ESP32-S2 Feather (also HUZZAH32 / ESP32-S3). Revision 2.3.
 //
+// 2.3: one kept-alive connection for everything (one TLS handshake, not one
+//      per MP3; one TLS session's worth of RAM), heartbeats keep going while a
+//      bulletin downloads, missing files are retried, and the heartbeat reports
+//      restarts, memory and download state for the companion server.
 // 2.2: the companion page counts down live. Sheets are counted as the paper
 //      moves (not only once it has been still for 1.5 s), each change is
 //      reported straight away over a kept-alive connection, even mid-sentence.

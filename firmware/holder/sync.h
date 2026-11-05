@@ -6,10 +6,11 @@
 //   * POSTs a heartbeat every POLL_*_S (the companion web page reads this to
 //     show "online / last pull / cached items"), and straight away whenever the
 //     sheet count changes, at most once per MIN_BEAT_MS, so the page's roll
-//     counts down as the paper is pulled. Heartbeats reuse one kept-alive TLS
-//     connection, so they are cheap enough to send while the holder is speaking;
-//     anything that needs a fresh TLS handshake or a download still waits for
-//     the current clip to finish,
+//     counts down as the paper is pulled,
+//   * does all of it over one kept-alive TLS connection: one handshake instead
+//     of one per file, cheap enough for a heartbeat mid-sentence, and only one
+//     TLS session's worth of internal RAM. A new handshake or a download waits
+//     for the current clip to finish; heartbeats carry on during downloads,
 //   * learns from the heartbeat reply which source the visitor chose and
 //     which bulletin version is current,
 //   * fetches bulletin.json + any missing MP3s into LittleFS and swaps the
